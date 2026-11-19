@@ -1,7 +1,7 @@
 {
   "domain": "surplife_ble",
   "name": "Surplife BLE",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "codeowners": [
     "@NathanBland"
   ],

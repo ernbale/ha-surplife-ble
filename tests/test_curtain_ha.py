@@ -238,9 +238,10 @@ async def test_service_schemas_validate_ranges_and_fill_defaults(ha: SimpleNames
     # No default for the orientation: a missing field means "use the device option".
     assert "controller_side" not in schema({"path": "/config/a.gif"})
     assert "flip" not in schema({"path": "/config/a.gif"})
-    assert schema({"path": "/a.gif", "controller_side": "right", "flip": "true"})[
-        "controller_side"
-    ] == "right"
+    assert (
+        schema({"path": "/a.gif", "controller_side": "right", "flip": "true"})["controller_side"]
+        == "right"
+    )
     assert schema({"url": "https://x/a.gif", "speed": "75", "flip": "true"})["speed"] == 75
     for bad in (
         {"speed": 0},
@@ -1335,9 +1336,7 @@ async def test_show_effect_service_uploads_the_effect_at_its_speed(ha: SimpleNam
     assert fake.payloads[-1] == bytes((0xE2, 0x09, 1, effects.EFFECTS["rain"].speed, 100, 0))
     assert coordinator.animation_name == "rain"
     with pytest.raises(ha.animation.AnimationError, match="at least 32x16"):
-        await light.async_show_effect(
-            **vol.Schema(ha.services.EFFECT_SCHEMA)({"effect": "heart"})
-        )
+        await light.async_show_effect(**vol.Schema(ha.services.EFFECT_SCHEMA)({"effect": "heart"}))
 
 
 @pytest.mark.asyncio
@@ -1418,15 +1417,16 @@ async def test_sequence_scrolls_a_text_too_wide_for_never_scroll(ha: SimpleNames
 
 
 @pytest.mark.asyncio
-async def test_never_scroll_drops_bold_then_scrolls_instead_of_failing(ha: SimpleNamespace) -> None:
+async def test_never_scroll_fits_the_text_or_scrolls_instead_of_failing(
+    ha: SimpleNamespace,
+) -> None:
     coordinator, _ = await make_curtain(ha)
     coordinator.text_scroll = "never"
     coordinator.text_size = "small"
     assert coordinator.text_settings("hi") == coordinator.text_settings()
-    fitted = coordinator.text_settings("abc")  # 22 LEDs in bold, 19 in normal: the screen is 20
-    assert (fitted["bold"], fitted["scroll"]) == (False, False)
-    wide = coordinator.text_settings("buon natale")
-    assert (wide["bold"], wide["scroll"]) == (True, None)
+    # 22 LEDs in bold and the screen is 20: the renderer narrows it, it stays still.
+    assert coordinator.text_settings("abc")["scroll"] is False
+    assert coordinator.text_settings("buon natale a tutti")["scroll"] is None
 
 
 @pytest.mark.asyncio

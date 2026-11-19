@@ -59,7 +59,7 @@ def test_long_text_scrolls_and_stays_within_the_frame_limit() -> None:
 
 def test_static_text_that_does_not_fit_is_refused() -> None:
     with pytest.raises(ValueError, match="wide"):
-        text.render_text("BUON NATALE", cols=32, rows=16, scroll=False)
+        text.render_text("BUON NATALE A TUTTI", cols=32, rows=16, scroll=False)
     with pytest.raises(ValueError, match="no printable"):
         text.render_text("   ", cols=32, rows=16)
 
@@ -101,3 +101,23 @@ def test_background_fills_the_leds_around_the_letters() -> None:
     assert set(frame) == {blue, YELLOW}
     scrolling = text.render_text("BUON NATALE", cols=32, rows=16, background=blue)
     assert set(scrolling.frames[0]) == {blue}
+
+
+def test_static_text_is_narrowed_to_fit_before_it_is_refused() -> None:
+    # PIPPER is 44 LEDs wide in bold and 38 in normal weight: only the narrow glyphs fit 32.
+    animation = text.render_text("PIPPER", cols=32, rows=16, scroll=False, size="small")
+    assert len(animation.frames) == 1
+    assert len(animation.strip[0]) <= 32
+    assert text.fit_lines("KETTI", 32, bold=True) == [text.text_columns("KETTI")]
+
+
+def test_static_text_uses_two_lines_when_one_is_not_enough() -> None:
+    animation = text.render_text("BUON NATALE", cols=32, rows=16, scroll=False, color=(9, 9, 9))
+    frame = animation.frames[0]
+    lit = [any(frame[y * 32 + x] == (9, 9, 9) for x in range(32)) for y in range(16)]
+    assert lit == [True] * 7 + [False] * 2 + [True] * 7
+    # A chosen size is kept: medium letters have no room for two lines.
+    with pytest.raises(ValueError, match="LEDs wide"):
+        text.render_text("BUON NATALE", cols=32, rows=16, scroll=False, size="medium")
+    with pytest.raises(ValueError, match="LEDs wide"):
+        text.render_text("TANTI AUGURI A TUTTI", cols=32, rows=16, scroll=False)

@@ -74,6 +74,43 @@ BOLD_FONT: dict[str, str] = {
     " ": "000 000 000 000 000 000 000",
 }
 
+# Narrow glyphs, 3 or 4 LEDs wide, used only to make a text fit the screen without
+# scrolling. Letters that cannot be drawn that narrow (M, V, W) keep the 5 x 7 glyph.
+NARROW_FONT: dict[str, str] = {
+    "A": "0110 1001 1001 1111 1001 1001 1001",
+    "B": "1110 1001 1001 1110 1001 1001 1110",
+    "C": "0111 1000 1000 1000 1000 1000 0111",
+    "D": "1110 1001 1001 1001 1001 1001 1110",
+    "E": "1111 1000 1000 1110 1000 1000 1111",
+    "F": "1111 1000 1000 1110 1000 1000 1000",
+    "G": "0111 1000 1000 1011 1001 1001 0111",
+    "H": "1001 1001 1001 1111 1001 1001 1001",
+    "J": "0011 0001 0001 0001 0001 1001 0110",
+    "K": "1001 1001 1010 1100 1010 1001 1001",
+    "L": "1000 1000 1000 1000 1000 1000 1111",
+    "N": "1001 1101 1101 1011 1011 1001 1001",
+    "O": "0110 1001 1001 1001 1001 1001 0110",
+    "P": "1110 1001 1001 1110 1000 1000 1000",
+    "Q": "0110 1001 1001 1001 1001 1010 0101",
+    "R": "1110 1001 1001 1110 1010 1001 1001",
+    "S": "0111 1000 1000 0110 0001 0001 1110",
+    "T": "111 010 010 010 010 010 010",
+    "U": "1001 1001 1001 1001 1001 1001 0110",
+    "X": "101 101 101 010 101 101 101",
+    "Y": "101 101 101 010 010 010 010",
+    "Z": "1111 0001 0010 0100 0100 1000 1111",
+    "0": "0110 1001 1001 1001 1001 1001 0110",
+    "2": "0110 1001 0001 0010 0100 1000 1111",
+    "3": "1110 0001 0001 0110 0001 0001 1110",
+    "4": "1010 1010 1010 1111 0010 0010 0010",
+    "5": "1111 1000 1110 0001 0001 1001 0110",
+    "6": "0110 1000 1000 1110 1001 1001 0110",
+    "7": "1111 0001 0010 0010 0100 0100 0100",
+    "8": "0110 1001 1001 0110 1001 1001 0110",
+    "9": "0110 1001 1001 0111 0001 0001 0110",
+    " ": "00 00 00 00 00 00 00",
+}
+
 
 def normalize(text: str) -> str:
     """Upper-case ``text`` and drop accents. Characters without a glyph become spaces."""
@@ -82,8 +119,13 @@ def normalize(text: str) -> str:
     return "".join(ch if ch in FONT else " " for ch in plain)
 
 
-def glyph(ch: str, *, bold: bool = False) -> list[str]:
-    """Return the 7 rows of ``ch`` as strings of ``0`` and ``1``."""
+def glyph(ch: str, *, bold: bool = False, narrow: bool = False) -> list[str]:
+    """Return the 7 rows of ``ch`` as strings of ``0`` and ``1``.
+
+    ``narrow`` picks the 3 or 4 LED wide glyph where there is one. It is never bold.
+    """
+    if narrow:
+        return NARROW_FONT.get(ch, FONT[ch]).split()
     if not bold:
         return FONT[ch].split()
     if ch in BOLD_FONT:
@@ -97,15 +139,59 @@ def glyph(ch: str, *, bold: bool = False) -> list[str]:
     ]
 
 
-def text_columns(text: str, *, bold: bool = False) -> list[list[bool]]:
+def text_columns(
+    text: str, *, bold: bool = False, narrow: bool = False, gap: int = LETTER_GAP
+) -> list[list[bool]]:
     """Return the text as a list of columns, each with 7 booleans (top to bottom)."""
     columns: list[list[bool]] = []
     for ch in normalize(text):
-        rows = glyph(ch, bold=bold)
+        rows = glyph(ch, bold=bold, narrow=narrow)
         for c in range(len(rows[0])):
             columns.append([rows[r][c] == "1" for r in range(GLYPH_ROWS)])
-        columns.extend([[False] * GLYPH_ROWS] * LETTER_GAP)
-    return columns[:-LETTER_GAP] if columns else []
+        columns.extend([[False] * GLYPH_ROWS] * gap)
+    return columns[:-gap] if columns else []
+
+
+def fit_lines(
+    text: str, cols: int, *, bold: bool = True, double: bool = False, two_lines: bool = False
+) -> list[list[list[bool]]] | None:
+    """Fit ``text`` in ``cols`` LEDs without scrolling. Return one or two lines of columns.
+
+    The text is tried as asked, then without bold, then with the letters one LED apart,
+    then with the narrow glyphs. With ``two_lines`` it is then split at a space, the most
+    even split first. ``double`` is the large size: every column counts twice and there
+    is no bold. Returns None if nothing fits.
+    """
+    styles = [(bold and not double, False, LETTER_GAP), (False, False, LETTER_GAP)]
+    styles += [(False, False, 1), (False, True, 1)]
+    styles = list(dict.fromkeys(styles))
+    width = 2 if double else 1
+
+    def line(part: str, style: tuple[bool, bool, int]) -> list[list[bool]] | None:
+        columns = text_columns(part, bold=style[0], narrow=style[1], gap=style[2])
+        if not columns or len(columns) * width > cols:
+            return None
+        return [column for column in columns for _ in range(width)]
+
+    words = normalize(text).split()
+    whole = " ".join(words)
+    for style in styles:
+        if (fitted := line(whole, style)) is not None:
+            return [fitted]
+    if two_lines and len(words) > 1:
+        splits = sorted(
+            range(1, len(words)),
+            key=lambda i: abs(len(" ".join(words[:i])) - len(" ".join(words[i:]))),
+        )
+
+        def best(part: str) -> list[list[bool]] | None:
+            return next((fit for style in styles if (fit := line(part, style))), None)
+
+        for i in splits:  # each line keeps the widest letters that fit it
+            first, second = best(" ".join(words[:i])), best(" ".join(words[i:]))
+            if first is not None and second is not None:
+                return [first, second]
+    return None
 
 
 SIZES = ("small", "medium", "large")
@@ -191,11 +277,31 @@ def render_text(
     if scroll is None:
         scroll = len(columns) > cols
     if not scroll:
-        if len(columns) > cols:
+        # Two lines of small letters need 7 + 1 + 7 rows. They are used only if the size
+        # was left free or is small: a chosen medium or large size is kept.
+        small = _ROW_REPEATS["small"]
+        two_lines = rows >= 2 * GLYPH_ROWS + 1 and (size is None or repeats == small)
+        lines = fit_lines(text, cols, bold=bold, double=large, two_lines=two_lines)
+        if lines is None:
             raise ValueError(f"the text is {len(columns)} LEDs wide and the screen is {cols}")
-        left = (cols - len(columns)) // 2
-        padded = [blank] * left + columns + [blank] * (cols - left - len(columns))
-        frame = paint(padded, cols)
+
+        def centered(line: list[list[bool]]) -> list[list[bool]]:
+            left = (cols - len(line)) // 2
+            return [blank] * left + line + [blank] * (cols - left - len(line))
+
+        if len(lines) == 1:
+            frame = paint(centered(lines[0]), cols)
+            if lines[0] != columns:
+                strip = paint(lines[0], len(lines[0]))
+        else:
+            gap = 2 if rows >= 2 * GLYPH_ROWS + 2 else 1
+            repeats, top = small, (rows - 2 * GLYPH_ROWS - gap) // 2
+            frame = paint(centered(lines[0]), cols)
+            top += GLYPH_ROWS + gap
+            lower = paint(centered(lines[1]), cols)
+            for y in range(top, top + GLYPH_ROWS):
+                frame[y] = lower[y]
+            strip = frame
         return TextAnimation([[pixel for row in frame for pixel in row]], strip, 0)
     band = [blank] * cols + columns + [blank] * cols
     travel = len(columns) + cols

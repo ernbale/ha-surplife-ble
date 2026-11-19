@@ -231,9 +231,7 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
 
     def _request_confirmation(self) -> None:
         self._confirmation_generation += 1
-        self.hass.async_create_task(
-            self._refresh_after_command(self._confirmation_generation)
-        )
+        self.hass.async_create_task(self._refresh_after_command(self._confirmation_generation))
         if self._assumed_rgb_deadline is not None:
             self.hass.async_create_task(
                 self._refresh_after_assumed_deadline(self._assumed_rgb_deadline)
@@ -296,9 +294,7 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
     async def async_set_power(self, turn_on: bool) -> None:
         await self._async_command("set_power", turn_on)
 
-    async def async_set_rgb(
-        self, rgb: tuple[int, int, int], brightness: int | None
-    ) -> None:
+    async def async_set_rgb(self, rgb: tuple[int, int, int], brightness: int | None) -> None:
         if brightness is None:
             brightness = 255
         state = await self._async_command(
@@ -310,9 +306,7 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
         if state.assumed and state.rgb is not None and state.brightness is not None:
             self._assumed_rgb = state.rgb
             self._assumed_rgb_brightness = state.brightness
-            self._assumed_rgb_deadline = (
-                asyncio.get_running_loop().time() + _ASSUMED_RGB_SECONDS
-            )
+            self._assumed_rgb_deadline = asyncio.get_running_loop().time() + _ASSUMED_RGB_SECONDS
             self._request_confirmation()
         else:
             self._clear_assumed_rgb()
@@ -327,9 +321,7 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
     async def async_set_brightness(self, brightness: int | None) -> None:
         if brightness is None:
             brightness = 255
-        state = await self._async_command(
-            "set_brightness", max(1, round(brightness / 255 * 100))
-        )
+        state = await self._async_command("set_brightness", max(1, round(brightness / 255 * 100)))
         if self.is_curtain:
             self._request_confirmation()
             return
@@ -375,9 +367,7 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
             return state.speed
         return self._last_animation_speed
 
-    async def async_set_effect(
-        self, effect_id: int, brightness_percent: int | None = None
-    ) -> None:
+    async def async_set_effect(self, effect_id: int, brightness_percent: int | None = None) -> None:
         """Start a built-in curtain effect."""
         await self._async_command(
             "set_effect",
@@ -552,23 +542,23 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
     def text_settings(self, value: str | None = None) -> dict[str, Any]:
         """Keyword arguments for ``animation.async_show_text`` from the text controls.
 
-        With ``value``, "never scroll" is made to work for that text: if it is wider than
-        the screen in bold it is tried in normal weight, and if it is still too wide it
-        scrolls. Refusing the text would leave the user with an error and nothing shown.
+        With ``value``, "never scroll" is made to work for that text: the renderer drops
+        the bold, narrows the letters or uses two lines to make it fit, and if it still
+        does not fit the text scrolls. Refusing it would show an error and nothing else.
         """
         settings = self._text_settings()
         if value is not None and settings["scroll"] is False:
             cols, rows = self.curtain_grid
-            for bold in dict.fromkeys((settings["bold"], False)):
-                try:
-                    text_render.render_text(
-                        value, cols=cols, rows=rows, bold=bold, scroll=False, size=settings["size"]
-                    )
-                except ValueError:
-                    continue
-                settings["bold"] = bold
-                break
-            else:
+            try:
+                text_render.render_text(
+                    value,
+                    cols=cols,
+                    rows=rows,
+                    bold=settings["bold"],
+                    scroll=False,
+                    size=settings["size"],
+                )
+            except ValueError:
                 settings["scroll"] = None
         return settings
 
