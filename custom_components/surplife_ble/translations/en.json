@@ -248,7 +248,7 @@
         "name": "Text"
       },
       "sequence": {
-        "name": "Sequence"
+        "name": "Sequence (e.g. heart 30s; HELLO 1m; snow)"
       }
     },
     "select": {
