@@ -26,16 +26,20 @@ def test_every_effect_fits_the_32x16_net(name: str) -> None:
     assert len(curtain_c2.build_upload(mapped, cols=32, rows=16)) == len(frames) + 3
 
 
-def test_patterns_fit_the_20x20_curtain_and_pictures_do_not() -> None:
-    names = effects.available(20, 20)
-    # The heart is 13 x 11 and fits. The sleigh crosses all 32 columns and does not.
-    assert "sparkle" in names and "heart" in names and "sleigh" not in names
-    for name in names:
+def test_patterns_fit_any_grid_and_pictures_shrink_to_half_size() -> None:
+    assert effects.available(20, 20) == list(effects.EFFECTS)  # the wide sleigh is scaled down
+    for name in effects.available(20, 20):
         frames = effects.build(name, 20, 20)
         assert len(frames) <= curtain_c2.MAX_UPLOAD_FRAMES
         assert all(len(frame) == 400 for frame in frames)
-    with pytest.raises(ValueError, match="at least 32x"):
-        effects.build("sleigh", 20, 20)
+    # A net with 4 rows excluded: the 13 row star is scaled to fit and stays lit.
+    star = effects.build("star", 32, 12)
+    assert all(len(frame) == 32 * 12 for frame in star)
+    assert sum(pixel != BLACK for pixel in star[0]) > 40
+    names = effects.available(12, 7)
+    assert "sparkle" in names and "heart" in names and "sleigh" not in names
+    with pytest.raises(ValueError, match="at least 16x"):
+        effects.build("sleigh", 12, 7)
     with pytest.raises(ValueError, match="unknown effect"):
         effects.build("nope", 32, 16)
     assert effects.available(32, 16) == list(effects.EFFECTS)

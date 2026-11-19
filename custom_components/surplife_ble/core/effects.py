@@ -718,11 +718,34 @@ def _snowman_scenes() -> list[Grid]:
     return scenes
 
 
+MIN_PICTURE_SCALE = 0.5  # below half size a picture is no longer recognizable
+
+
+def _shrink(scene: Grid, box: tuple[int, int, int, int], width: int, height: int) -> Grid:
+    """Scale the ``box`` part of ``scene`` down to ``width`` x ``height``.
+
+    Each new pixel takes the most common color of the pixels it covers, and stays dark
+    if fewer than half of them are lit, so thick shapes keep their outline.
+    """
+    x0, y0, x1, y1 = box
+    out = _blank(width, height)
+    for y in range(height):
+        ys = range(y0 + y * (y1 - y0) // height, max(y0 + (y + 1) * (y1 - y0) // height, 1))
+        for x in range(width):
+            xs = range(x0 + x * (x1 - x0) // width, x0 + (x + 1) * (x1 - x0) // width)
+            block = [scene[sy][sx] for sy in ys for sx in xs]
+            lit = [pixel for pixel in block if pixel != K]
+            if block and len(lit) * 2 >= len(block):
+                out[y][x] = max(set(lit), key=lit.count)
+    return out
+
+
 def _picture(scenes: Callable[[], list[Grid]]) -> Callable[[int, int], Frames]:
-    """Wrap a 32 x 16 scene builder as an effect for any grid that holds its lit part.
+    """Wrap a 32 x 16 scene builder as an effect for other grids too.
 
     On a bigger grid the scene is centered. On a smaller one, for example a net with
-    lines excluded, the dark border of the scene is cut away.
+    lines excluded, the dark border of the scene is cut away, and if the lit part is
+    still too big it is scaled down, to half size at most.
     """
 
     @functools.cache
@@ -737,6 +760,13 @@ def _picture(scenes: Callable[[], list[Grid]]) -> Callable[[int, int], Frames]:
         xs, ys = [x for x, _ in lit], [y for _, y in lit]
         return min(xs), min(ys), max(xs) + 1, max(ys) + 1
 
+    def smallest() -> tuple[int, int]:
+        x0, y0, x1, y1 = bounds()
+        return (
+            math.ceil((x1 - x0) * MIN_PICTURE_SCALE),
+            math.ceil((y1 - y0) * MIN_PICTURE_SCALE),
+        )
+
     def window(grid: int, scene: int, low: int, high: int) -> tuple[int, int, int]:
         """(first scene line, first grid line, lines) for one axis."""
         if grid >= scene:
@@ -745,19 +775,31 @@ def _picture(scenes: Callable[[], list[Grid]]) -> Callable[[int, int], Frames]:
 
     def effect(cols: int, rows: int) -> Frames:
         x0, y0, x1, y1 = bounds()
-        if cols < x1 - x0 or rows < y1 - y0:
-            raise ValueError(f"this picture needs at least {x1 - x0}x{y1 - y0} LEDs")
-        sx, dx, width = window(cols, SCENE_COLS, x0, x1)
-        sy, dy, height = window(rows, SCENE_ROWS, y0, y1)
+        lit_width, lit_height = x1 - x0, y1 - y0
         frames = []
+        if cols >= lit_width and rows >= lit_height:
+            sx, dx, width = window(cols, SCENE_COLS, x0, x1)
+            sy, dy, height = window(rows, SCENE_ROWS, y0, y1)
+            for scene in scenes():
+                g = _blank(cols, rows)
+                for y in range(height):
+                    g[dy + y][dx : dx + width] = scene[sy + y][sx : sx + width]
+                frames.append(_flat(g))
+            return frames
+        scale = min(cols / lit_width, rows / lit_height)
+        if scale < MIN_PICTURE_SCALE:
+            width, height = smallest()
+            raise ValueError(f"this picture needs at least {width}x{height} LEDs")
+        width, height = max(int(lit_width * scale), 1), max(int(lit_height * scale), 1)
+        dx, dy = (cols - width) // 2, (rows - height) // 2
         for scene in scenes():
             g = _blank(cols, rows)
-            for y in range(height):
-                g[dy + y][dx : dx + width] = scene[sy + y][sx : sx + width]
+            for y, row in enumerate(_shrink(scene, bounds(), width, height)):
+                g[dy + y][dx : dx + width] = row
             frames.append(_flat(g))
         return frames
 
-    effect.size = lambda: (bounds()[2] - bounds()[0], bounds()[3] - bounds()[1])  # type: ignore[attr-defined]
+    effect.size = smallest  # type: ignore[attr-defined]
     return effect
 
 

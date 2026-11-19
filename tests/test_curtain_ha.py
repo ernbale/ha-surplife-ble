@@ -1335,8 +1335,6 @@ async def test_show_effect_service_uploads_the_effect_at_its_speed(ha: SimpleNam
     assert uploads(fake) == [len(effects.build("rain", 20, 20))]
     assert fake.payloads[-1] == bytes((0xE2, 0x09, 1, effects.EFFECTS["rain"].speed, 100, 0))
     assert coordinator.animation_name == "rain"
-    with pytest.raises(ha.animation.AnimationError, match="at least 32x"):
-        await light.async_show_effect(**vol.Schema(ha.services.EFFECT_SCHEMA)({"effect": "sleigh"}))
 
 
 @pytest.mark.asyncio
