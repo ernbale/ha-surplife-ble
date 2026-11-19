@@ -53,7 +53,7 @@ async def async_setup_entry(
 
 
 class SurplifeTextSelect(SelectEntity, RestoreEntity):
-    """One setting used the next time a text is shown. Changing it sends nothing."""
+    """One setting of the text. Changing it redraws the text of the Text box."""
 
     _attr_has_entity_name = True
     _attr_should_poll = False
@@ -80,6 +80,7 @@ class SurplifeTextSelect(SelectEntity, RestoreEntity):
     async def async_select_option(self, option: str) -> None:
         setattr(self._coordinator, self._attribute, option)
         self.async_write_ha_state()
+        self._coordinator.async_refresh_text()
 
 
 class SurplifeAnimationSelect(CoordinatorEntity[SurplifeCoordinator], SelectEntity, RestoreEntity):

@@ -513,6 +513,42 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
                 self.sequence_index = None
                 self.async_update_listeners()
 
+    # The text controls redraw the text of the Text box when they change, so the user sees
+    # what each one does. Changes made while one upload runs are sent together after it.
+    text_value: str | None = None  # the line of the Text box
+    _text_refresh_task: asyncio.Task[None] | None = None
+    _text_refresh_dirty = False
+    _text_refresh_delay = 1.0  # seconds to wait for more changes; 0 in tests
+
+    def async_refresh_text(self) -> None:
+        """Send the Text box again with the current text controls, in the background.
+
+        Nothing is sent if the box is empty or a sequence is running: the sequence picks
+        the new settings up at its next text step.
+        """
+        if not self.text_value or self.sequence_running or not self.is_curtain:
+            return
+        self._text_refresh_dirty = True
+        if self._text_refresh_task is None or self._text_refresh_task.done():
+            self._text_refresh_task = asyncio.get_running_loop().create_task(
+                self._async_refresh_text()
+            )
+
+    async def _async_refresh_text(self) -> None:
+        from . import animation
+
+        while self._text_refresh_dirty:
+            self._text_refresh_dirty = False
+            await asyncio.sleep(self._text_refresh_delay)
+            if self._text_refresh_dirty or not self.text_value or self.sequence_running:
+                continue
+            try:
+                await animation.async_show_text(
+                    self.hass, self, self.text_value, **self.text_settings(self.text_value)
+                )
+            except animation.AnimationError as err:
+                _LOGGER.warning("Could not redraw the text: %s", err)
+
     def text_settings(self, value: str | None = None) -> dict[str, Any]:
         """Keyword arguments for ``animation.async_show_text`` from the text controls.
 
@@ -559,5 +595,8 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
 
     async def async_disconnect(self) -> None:
         self.async_stop_sequence()
+        self._text_refresh_dirty = False
+        if self._text_refresh_task is not None:
+            self._text_refresh_task.cancel()
         if self.client:
             await self.client.disconnect()

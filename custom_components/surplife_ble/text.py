@@ -60,6 +60,7 @@ class SurplifeText(CoordinatorEntity[SurplifeCoordinator], TextEntity, RestoreEn
         last = await self.async_get_last_state()
         if last is not None and last.state not in ("unknown", "unavailable", ""):
             self._attr_native_value = last.state
+            self.coordinator.text_value = last.state
 
     async def async_set_value(self, value: str) -> None:
         self.coordinator.async_stop_sequence()
@@ -67,6 +68,7 @@ class SurplifeText(CoordinatorEntity[SurplifeCoordinator], TextEntity, RestoreEn
             self.hass, self.coordinator, value, **self.coordinator.text_settings(value)
         )
         self._attr_native_value = value
+        self.coordinator.text_value = value
         self.async_write_ha_state()
 
 

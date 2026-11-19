@@ -38,7 +38,7 @@ async def async_setup_entry(
 
 
 class SurplifeTextBold(SwitchEntity, RestoreEntity):
-    """Bold letters the next time a text is shown. Changing it sends nothing."""
+    """Bold letters. Changing it redraws the text of the Text box."""
 
     _attr_has_entity_name = True
     _attr_should_poll = False
@@ -63,10 +63,12 @@ class SurplifeTextBold(SwitchEntity, RestoreEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         self._coordinator.text_bold = True
         self.async_write_ha_state()
+        self._coordinator.async_refresh_text()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         self._coordinator.text_bold = False
         self.async_write_ha_state()
+        self._coordinator.async_refresh_text()
 
 
 class SurplifeSequenceSwitch(CoordinatorEntity[SurplifeCoordinator], SwitchEntity):

@@ -95,7 +95,8 @@ data:
 
 **Text controls.** The device page also has a Text box, with Text size, Text scrolling,
 Text color and Text bold next to it. Typing a text shows it with those settings, at the
-speed of the Animation speed slider. The names are translated to Italian.
+speed of the Animation speed slider. Changing one of those controls redraws the text of the
+box. A text too wide for "never scroll" loses the bold, and scrolls if it is still too wide. The names are translated to Italian.
 
 **Animations.** The Animation selector on the device page draws built-in effects for the
 grid of the device and plays them: sparkling lights, rain, snow, green rain, fire,

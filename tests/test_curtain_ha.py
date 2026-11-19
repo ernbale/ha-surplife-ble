@@ -1427,3 +1427,20 @@ async def test_never_scroll_drops_bold_then_scrolls_instead_of_failing(ha: Simpl
     assert (fitted["bold"], fitted["scroll"]) == (False, False)
     wide = coordinator.text_settings("buon natale")
     assert (wide["bold"], wide["scroll"]) == (True, None)
+
+
+@pytest.mark.asyncio
+async def test_changing_a_text_control_redraws_the_text_box(ha: SimpleNamespace) -> None:
+    coordinator, fake = await make_curtain(ha)
+    coordinator._text_refresh_delay = 0
+    coordinator.async_refresh_text()  # the Text box is empty: nothing to draw
+    assert coordinator._text_refresh_task is None
+    coordinator.text_value = "hi"
+    coordinator.text_scroll = "always"
+    coordinator.async_refresh_text()
+    coordinator.text_color = "red"
+    coordinator.async_refresh_text()  # two quick changes are sent together
+    await coordinator._text_refresh_task
+    assert len(uploads(fake)) == 1
+    assert uploads(fake)[0] > 1  # it scrolls now
+    assert coordinator.animation_title == "hi"
