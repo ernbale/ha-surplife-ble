@@ -64,7 +64,7 @@ class SurplifeText(CoordinatorEntity[SurplifeCoordinator], TextEntity, RestoreEn
     async def async_set_value(self, value: str) -> None:
         self.coordinator.async_stop_sequence()
         await animation.async_show_text(
-            self.hass, self.coordinator, value, **self.coordinator.text_settings()
+            self.hass, self.coordinator, value, **self.coordinator.text_settings(value)
         )
         self._attr_native_value = value
         self.async_write_ha_state()

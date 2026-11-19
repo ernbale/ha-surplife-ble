@@ -21,6 +21,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import CALIBRATION_OPTIONS, CONF_CONTROLLER_SIDE, CONF_FLIP, UPDATE_INTERVAL
 from .core import curtain_c2
+from .core import text as text_render
 from .core.calibration import IDENTITY, CalibrationError, ColorCalibration
 from .core.client import LightClient
 from .core.models import LightState, apply_assumed_rgb, rgb_state_matches
@@ -490,13 +491,8 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
                     for _attempt in range(3):
                         try:
                             if step.kind == "text":
-                                settings = self.text_settings()
-                                if settings["scroll"] is False:
-                                    # "Never scroll" would refuse a text wider than the
-                                    # screen and the step would be lost. Scroll that one.
-                                    settings["scroll"] = None
                                 await animation.async_show_text(
-                                    self.hass, self, step.value, **settings
+                                    self.hass, self, step.value, **self.text_settings(step.value)
                                 )
                             else:
                                 await animation.async_show_effect(self.hass, self, step.value)
@@ -517,8 +513,30 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
                 self.sequence_index = None
                 self.async_update_listeners()
 
-    def text_settings(self) -> dict[str, Any]:
-        """Keyword arguments for ``animation.async_show_text`` from the text controls."""
+    def text_settings(self, value: str | None = None) -> dict[str, Any]:
+        """Keyword arguments for ``animation.async_show_text`` from the text controls.
+
+        With ``value``, "never scroll" is made to work for that text: if it is wider than
+        the screen in bold it is tried in normal weight, and if it is still too wide it
+        scrolls. Refusing the text would leave the user with an error and nothing shown.
+        """
+        settings = self._text_settings()
+        if value is not None and settings["scroll"] is False:
+            cols, rows = self.curtain_grid
+            for bold in dict.fromkeys((settings["bold"], False)):
+                try:
+                    text_render.render_text(
+                        value, cols=cols, rows=rows, bold=bold, scroll=False, size=settings["size"]
+                    )
+                except ValueError:
+                    continue
+                settings["bold"] = bold
+                break
+            else:
+                settings["scroll"] = None
+        return settings
+
+    def _text_settings(self) -> dict[str, Any]:
         return {
             "color": self.TEXT_COLORS.get(self.text_color, self.TEXT_COLORS["yellow"]),
             "background": (

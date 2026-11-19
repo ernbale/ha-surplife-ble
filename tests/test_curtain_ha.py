@@ -1415,3 +1415,15 @@ async def test_sequence_scrolls_a_text_too_wide_for_never_scroll(ha: SimpleNames
     assert waits == [20, 40]  # no retries: both steps got on the device
     assert uploads(fake)[0] == 1  # the short text stays still
     assert uploads(fake)[1] > 1  # the long one scrolls instead of failing
+
+
+@pytest.mark.asyncio
+async def test_never_scroll_drops_bold_then_scrolls_instead_of_failing(ha: SimpleNamespace) -> None:
+    coordinator, _ = await make_curtain(ha)
+    coordinator.text_scroll = "never"
+    coordinator.text_size = "small"
+    assert coordinator.text_settings("hi") == coordinator.text_settings()
+    fitted = coordinator.text_settings("abc")  # 22 LEDs in bold, 19 in normal: the screen is 20
+    assert (fitted["bold"], fitted["scroll"]) == (False, False)
+    wide = coordinator.text_settings("buon natale")
+    assert (wide["bold"], wide["scroll"]) == (True, None)
