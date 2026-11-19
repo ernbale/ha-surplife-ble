@@ -172,6 +172,21 @@ class SurplifeLight(CoordinatorEntity[SurplifeCoordinator], LightEntity):
             resample=kwargs["resample"],
         )
 
+    async def async_show_text(self, **kwargs: Any) -> None:
+        """Service: render text, show it in the Screen preview and upload it."""
+        await animation.async_show_text(
+            self.hass,
+            self.coordinator,
+            kwargs["text"],
+            color=tuple(kwargs["color"]),
+            bold=kwargs["bold"],
+            scroll=kwargs.get("scroll"),
+            size=kwargs.get("size"),
+            speed=kwargs["speed"],
+            brightness=kwargs["brightness"],
+            preview_only=kwargs["preview_only"],
+        )
+
     async def async_play_animation(self, **kwargs: Any) -> None:
         """Service: play the animation stored in the curtain's flash."""
         if not self.coordinator.is_curtain:

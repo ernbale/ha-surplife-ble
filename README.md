@@ -77,6 +77,26 @@ Not verified: the other effect IDs. The vendor manual lists 17 built-in effects.
 
 Everything in the curtain section below applies, with 32x16 in place of 20x20.
 
+**Text.** The `surplife_ble.show_text` service writes text on the net or the curtain. Short
+text is shown still and centered, longer text scrolls from right to left. Letters are bold
+and 10 LEDs tall by default; `size` can be `small` (7), `medium` (10) or `large` (14, twice
+as wide), and `scroll` forces scrolling on or off. The Screen preview shows the whole text as one wide picture.
+With `preview_only: true` only the preview changes and nothing is sent to the device.
+
+```yaml
+action: surplife_ble.show_text
+target:
+  entity_id: light.net
+data:
+  text: BUON NATALE
+  color: [255, 200, 0]
+  speed: 75
+```
+
+**Examples.** [examples/net_32x16](examples/net_32x16) has eleven ready-made animations
+(heart, star, tree, comet, sleigh, rainbow, snow, sparkles, text) and the script that draws
+them.
+
 ## IOTBT curtain lights (product 0xC2)
 
 A curtain is added like any other device. When the integration recognizes it, one device

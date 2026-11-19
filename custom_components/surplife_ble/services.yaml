@@ -85,3 +85,51 @@ play_animation:
           min: 1
           max: 100
           mode: slider
+show_text:
+  target:
+    entity:
+      integration: surplife_ble
+      domain: light
+  fields:
+    text:
+      required: true
+      example: BUON NATALE
+      selector:
+        text:
+    color:
+      default: [255, 200, 0]
+      selector:
+        color_rgb:
+    bold:
+      default: true
+      selector:
+        boolean:
+    scroll:
+      selector:
+        boolean:
+    size:
+      selector:
+        select:
+          translation_key: text_size
+          options:
+            - small
+            - medium
+            - large
+    speed:
+      default: 75
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: slider
+    brightness:
+      default: 100
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: slider
+    preview_only:
+      default: false
+      selector:
+        boolean:

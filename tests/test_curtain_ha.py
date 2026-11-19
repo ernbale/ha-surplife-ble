@@ -216,6 +216,7 @@ async def test_light_setup_registers_the_services(ha: SimpleNamespace) -> None:
     assert ha.platform.services == {
         "upload_animation": (ha.services.UPLOAD_SCHEMA, "async_upload_animation"),
         "play_animation": (ha.services.PLAY_SCHEMA, "async_play_animation"),
+        "show_text": (ha.services.TEXT_SCHEMA, "async_show_text"),
     }
 
 

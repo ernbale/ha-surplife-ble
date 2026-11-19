@@ -435,6 +435,13 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
         self._request_confirmation()
         self.async_update_listeners()
 
+    def async_set_preview(self, preview_png: bytes, title: str | None = None) -> None:
+        """Show a picture in the Screen preview without sending anything to the device."""
+        self.animation_title = title
+        self.preview_png = preview_png
+        self.preview_updated = datetime.now(UTC)
+        self.async_update_listeners()
+
     async def async_disconnect(self) -> None:
         if self.client:
             await self.client.disconnect()

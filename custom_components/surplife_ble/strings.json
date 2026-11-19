@@ -87,6 +87,44 @@
           "description": "Brightness from 1 to 100."
         }
       }
+    },
+    "show_text": {
+      "name": "Show text",
+      "description": "Write text on the curtain or net. Short text is shown still and centered. Longer text scrolls from right to left. The whole text is shown in the Screen preview. Unless Preview only is on, the text is stored in the flash memory of the device, so do not call this often.",
+      "fields": {
+        "text": {
+          "name": "Text",
+          "description": "Letters, digits and . , ! ? - + : ' /. Lower case is shown as upper case and accents are dropped."
+        },
+        "color": {
+          "name": "Color",
+          "description": "Color of the letters. Fully saturated colors look best."
+        },
+        "bold": {
+          "name": "Bold",
+          "description": "Strokes two LEDs wide. Easier to read on a coarse grid."
+        },
+        "scroll": {
+          "name": "Scroll",
+          "description": "On: always scroll. Off: show still, which fails if the text is wider than the screen. Empty: scroll only when the text does not fit."
+        },
+        "size": {
+          "name": "Size",
+          "description": "Small letters are 7 LEDs tall, medium 10 and large 14 (and twice as wide). Empty: medium when the screen has at least 14 rows."
+        },
+        "speed": {
+          "name": "Speed",
+          "description": "Scrolling speed from 1 (slow) to 100 (very fast)."
+        },
+        "brightness": {
+          "name": "Brightness",
+          "description": "Brightness from 1 to 100."
+        },
+        "preview_only": {
+          "name": "Preview only",
+          "description": "Only update the Screen preview. Nothing is sent to the device."
+        }
+      }
     }
   },
   "options": {
@@ -125,6 +163,13 @@
       "options": {
         "left": "Left",
         "right": "Right"
+      }
+    },
+    "text_size": {
+      "options": {
+        "small": "Small (7 LEDs)",
+        "medium": "Medium (10 LEDs)",
+        "large": "Large (14 LEDs)"
       }
     }
   }

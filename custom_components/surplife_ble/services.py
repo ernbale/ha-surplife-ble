@@ -1,4 +1,4 @@
-"""Entity services for the IOTBT curtain: upload_animation and play_animation."""
+"""Entity services for the IOTBT curtain: upload_animation, play_animation and show_text."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 SERVICE_UPLOAD_ANIMATION = "upload_animation"
 SERVICE_PLAY_ANIMATION = "play_animation"
+SERVICE_SHOW_TEXT = "show_text"
 
 ATTR_PATH = "path"
 ATTR_URL = "url"
@@ -24,6 +25,12 @@ ATTR_CONTROLLER_SIDE = "controller_side"
 ATTR_FLIP = "flip"
 ATTR_MAX_FRAMES = "max_frames"
 ATTR_RESAMPLE = "resample"
+ATTR_TEXT = "text"
+ATTR_COLOR = "color"
+ATTR_BOLD = "bold"
+ATTR_SCROLL = "scroll"
+ATTR_SIZE = "size"
+ATTR_PREVIEW_ONLY = "preview_only"
 
 _PERCENT = vol.All(vol.Coerce(int), vol.Range(min=1, max=100))
 _MODE = vol.All(vol.Coerce(int), vol.Range(min=0, max=255))
@@ -48,6 +55,23 @@ UPLOAD_SCHEMA = {
 }
 
 
+_BYTE = vol.All(vol.Coerce(int), vol.Range(min=0, max=255))
+_COLOR = vol.All(vol.ExactSequence((_BYTE, _BYTE, _BYTE)), vol.Coerce(tuple))
+
+TEXT_SCHEMA = {
+    vol.Required(ATTR_TEXT): vol.All(cv.string, vol.Length(min=1, max=200)),
+    vol.Optional(ATTR_COLOR, default=[255, 200, 0]): _COLOR,
+    vol.Optional(ATTR_BOLD, default=True): cv.boolean,
+    # No default: short text is static and long text scrolls.
+    vol.Optional(ATTR_SCROLL): cv.boolean,
+    # No default: medium on screens with at least 14 rows, small otherwise.
+    vol.Optional(ATTR_SIZE): vol.In(["small", "medium", "large"]),
+    vol.Optional(ATTR_SPEED, default=75): _PERCENT,
+    vol.Optional(ATTR_BRIGHTNESS, default=100): _PERCENT,
+    vol.Optional(ATTR_PREVIEW_ONLY, default=False): cv.boolean,
+}
+
+
 def async_register_entity_services(platform: EntityPlatform) -> None:
     """Register the curtain services on the light platform."""
     platform.async_register_entity_service(
@@ -56,3 +80,4 @@ def async_register_entity_services(platform: EntityPlatform) -> None:
     platform.async_register_entity_service(
         SERVICE_PLAY_ANIMATION, PLAY_SCHEMA, "async_play_animation"
     )
+    platform.async_register_entity_service(SERVICE_SHOW_TEXT, TEXT_SCHEMA, "async_show_text")

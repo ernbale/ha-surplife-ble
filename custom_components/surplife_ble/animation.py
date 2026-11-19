@@ -19,6 +19,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.network import get_url
 
 from .core import curtain_c2
+from .core import text as text_render
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -257,3 +258,72 @@ async def async_upload(
     except (curtain_c2.CurtainUploadError, RuntimeError, ValueError, OSError, TimeoutError) as err:
         raise AnimationError(str(err)) from err
     return len(decoded.frames)
+
+
+async def async_show_text(
+    hass: HomeAssistant,
+    coordinator: SurplifeCoordinator,
+    text: str,
+    *,
+    color: tuple[int, int, int] = (255, 200, 0),
+    bold: bool = True,
+    scroll: bool | None = None,
+    size: str | None = None,
+    speed: int = 75,
+    brightness: int = 100,
+    preview_only: bool = False,
+) -> int:
+    """Render ``text``, show it in the Screen preview and upload it. Returns the frame count.
+
+    Short text is one centered frame. Longer text scrolls from right to left. The preview
+    is the whole text as one wide picture. With ``preview_only`` nothing is sent to the
+    device, so the flash is not written.
+    """
+    if not coordinator.is_curtain:
+        raise AnimationError(
+            "this device is not an IOTBT curtain or net, or it is not connected yet"
+        )
+    cols, rows = coordinator.curtain_grid
+
+    def _render() -> tuple[list[list[curtain_c2.RGB]], bytes]:
+        rendered = text_render.render_text(
+            text,
+            cols=cols,
+            rows=rows,
+            color=color,
+            bold=bold,
+            scroll=scroll,
+            size=size,
+            max_frames=curtain_c2.max_upload_frames(cols, rows),
+        )
+        frames = [
+            curtain_c2.image_to_frame(
+                frame,
+                controller_side=coordinator.controller_side,
+                flip=coordinator.flip,
+                cols=cols,
+                rows=rows,
+            )
+            for frame in rendered.frames
+        ]
+        return frames, text_render.render_strip_png(rendered.strip)
+
+    try:
+        frames, preview = await hass.async_add_executor_job(_render)
+    except (ValueError, RuntimeError) as err:
+        raise AnimationError(str(err)) from err
+    if preview_only:
+        coordinator.async_set_preview(preview, text)
+        return len(frames)
+    try:
+        await coordinator.async_upload_animation(
+            frames,
+            mode=curtain_c2.DEFAULT_PLAY_MODE,
+            speed=speed,
+            brightness_percent=brightness,
+            title=text,
+            preview_png=preview,
+        )
+    except (curtain_c2.CurtainUploadError, RuntimeError, ValueError, OSError, TimeoutError) as err:
+        raise AnimationError(str(err)) from err
+    return len(frames)
