@@ -672,3 +672,27 @@ def test_net_71_upload_matches_the_frames_accepted_by_the_device() -> None:
         curtain_c2.build_upload([frame] * 101, cols=32, rows=16)
     with pytest.raises(ValueError):
         curtain_c2.build_upload([frame])  # a 512-pixel frame is not a 20 x 20 frame
+
+
+def test_layout_excludes_lines_and_rotates_the_canvas() -> None:
+    layout = curtain_c2.Layout(top=3, bottom=4)
+    assert curtain_c2.canvas_size(32, 16, layout) == (32, 9)
+    red = (255, 0, 0)
+    image = curtain_c2.canvas_to_image([red] * (32 * 9), 32, 16, layout)
+    lit_rows = [all(image[y * 32 + x] == red for x in range(32)) for y in range(16)]
+    assert lit_rows == [False] * 3 + [True] * 9 + [False] * 4
+    assert curtain_c2.canvas_size(32, 16, curtain_c2.Layout(rotation=90)) == (16, 32)
+    # One lit pixel at the top left of the canvas, for each rotation.
+    spots = {}
+    for rotation in curtain_c2.ROTATIONS:
+        layout = curtain_c2.Layout(rotation=rotation)
+        width, height = curtain_c2.canvas_size(32, 16, layout)
+        canvas = [red] + [(0, 0, 0)] * (width * height - 1)
+        image = curtain_c2.canvas_to_image(canvas, 32, 16, layout)
+        index = image.index(red)
+        spots[rotation] = (index % 32, index // 32)
+    assert spots == {0: (0, 0), 90: (31, 0), 180: (31, 15), 270: (0, 15)}
+    with pytest.raises(ValueError, match="leave no LEDs"):
+        curtain_c2.canvas_size(32, 16, curtain_c2.Layout(top=8, bottom=8))
+    with pytest.raises(ValueError, match="rotation"):
+        curtain_c2.canvas_size(32, 16, curtain_c2.Layout(rotation=45))

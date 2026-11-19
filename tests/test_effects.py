@@ -28,13 +28,14 @@ def test_every_effect_fits_the_32x16_net(name: str) -> None:
 
 def test_patterns_fit_the_20x20_curtain_and_pictures_do_not() -> None:
     names = effects.available(20, 20)
-    assert "sparkle" in names and "rain" in names and "heart" not in names
+    # The heart is 13 x 11 and fits. The sleigh crosses all 32 columns and does not.
+    assert "sparkle" in names and "heart" in names and "sleigh" not in names
     for name in names:
         frames = effects.build(name, 20, 20)
         assert len(frames) <= curtain_c2.MAX_UPLOAD_FRAMES
         assert all(len(frame) == 400 for frame in frames)
-    with pytest.raises(ValueError, match="at least 32x16"):
-        effects.build("heart", 20, 20)
+    with pytest.raises(ValueError, match="at least 32x"):
+        effects.build("sleigh", 20, 20)
     with pytest.raises(ValueError, match="unknown effect"):
         effects.build("nope", 32, 16)
     assert effects.available(32, 16) == list(effects.EFFECTS)

@@ -11,6 +11,7 @@ The patterns (sparkle, rain, snow, rainbow, fire, plasma...) fit any grid. The p
 from __future__ import annotations
 
 import colorsys
+import functools
 import math
 import random
 from collections.abc import Callable
@@ -718,27 +719,52 @@ def _snowman_scenes() -> list[Grid]:
 
 
 def _picture(scenes: Callable[[], list[Grid]]) -> Callable[[int, int], Frames]:
-    """Wrap a 32 x 16 scene builder as an effect that centers it on the grid."""
+    """Wrap a 32 x 16 scene builder as an effect for any grid that holds its lit part.
+
+    On a bigger grid the scene is centered. On a smaller one, for example a net with
+    lines excluded, the dark border of the scene is cut away.
+    """
+
+    @functools.cache
+    def bounds() -> tuple[int, int, int, int]:
+        lit = [
+            (x, y)
+            for scene in scenes()
+            for y, row in enumerate(scene)
+            for x, pixel in enumerate(row)
+            if pixel != K
+        ]
+        xs, ys = [x for x, _ in lit], [y for _, y in lit]
+        return min(xs), min(ys), max(xs) + 1, max(ys) + 1
+
+    def window(grid: int, scene: int, low: int, high: int) -> tuple[int, int, int]:
+        """(first scene line, first grid line, lines) for one axis."""
+        if grid >= scene:
+            return 0, (grid - scene) // 2, scene
+        return min(max((low + high - grid) // 2, 0), scene - grid), 0, grid
 
     def effect(cols: int, rows: int) -> Frames:
-        if cols < SCENE_COLS or rows < SCENE_ROWS:
-            raise ValueError(f"this picture needs at least {SCENE_COLS}x{SCENE_ROWS} LEDs")
-        x0, y0 = (cols - SCENE_COLS) // 2, (rows - SCENE_ROWS) // 2
+        x0, y0, x1, y1 = bounds()
+        if cols < x1 - x0 or rows < y1 - y0:
+            raise ValueError(f"this picture needs at least {x1 - x0}x{y1 - y0} LEDs")
+        sx, dx, width = window(cols, SCENE_COLS, x0, x1)
+        sy, dy, height = window(rows, SCENE_ROWS, y0, y1)
         frames = []
         for scene in scenes():
             g = _blank(cols, rows)
-            for y, row in enumerate(scene):
-                g[y0 + y][x0 : x0 + SCENE_COLS] = row
+            for y in range(height):
+                g[dy + y][dx : dx + width] = scene[sy + y][sx : sx + width]
             frames.append(_flat(g))
         return frames
 
+    effect.size = lambda: (bounds()[2] - bounds()[0], bounds()[3] - bounds()[1])  # type: ignore[attr-defined]
     return effect
 
 
 class Effect(NamedTuple):
     build: Callable[[int, int], Frames]
     speed: int  # playback speed that looks right, 1-100
-    picture: bool = False  # needs at least 32 x 16
+    picture: bool = False  # a drawing with a smallest size, see ``_picture``
 
 
 EFFECTS: dict[str, Effect] = {
@@ -824,9 +850,15 @@ NAMES: dict[str, tuple[str, str]] = {
 
 
 def available(cols: int, rows: int) -> list[str]:
-    """Effect names that fit a grid: all patterns, and the pictures from 32 x 16 up."""
-    fits = cols >= SCENE_COLS and rows >= SCENE_ROWS
-    return [name for name, effect in EFFECTS.items() if fits or not effect.picture]
+    """Effect names that fit a grid: all patterns, and the pictures it has room for."""
+    names = []
+    for name, effect in EFFECTS.items():
+        if effect.picture:
+            width, height = effect.build.size()  # type: ignore[attr-defined]
+            if cols < width or rows < height:
+                continue
+        names.append(name)
+    return names
 
 
 def build(name: str, cols: int, rows: int) -> Frames:

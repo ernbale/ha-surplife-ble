@@ -196,6 +196,45 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
         """(columns, rows) of the connected curtain or net. 20 x 20 until it is resolved."""
         return self.client.curtain_grid if self.client else curtain_c2.DEFAULT_GRID
 
+    # Layout controls of the device page: rotation and lines of LEDs left dark.
+    layout_rotation: str = "0"
+    layout_top: str = "0"
+    layout_bottom: str = "0"
+    layout_left: str = "0"
+    layout_right: str = "0"
+
+    @property
+    def layout(self) -> curtain_c2.Layout:
+        return curtain_c2.Layout(
+            int(self.layout_rotation),
+            int(self.layout_top),
+            int(self.layout_bottom),
+            int(self.layout_left),
+            int(self.layout_right),
+        )
+
+    @property
+    def canvas(self) -> tuple[int, int]:
+        """(columns, rows) to draw on: the grid turned by the layout, less the dark lines."""
+        return curtain_c2.canvas_size(*self.curtain_grid, self.layout)
+
+    def canvas_frame(
+        self,
+        image: list[tuple[int, int, int]],
+        *,
+        controller_side: str | None = None,
+        flip: bool | None = None,
+    ) -> list[tuple[int, int, int]]:
+        """Turn a canvas picture into a frame in the buffer order of the device."""
+        cols, rows = self.curtain_grid
+        return curtain_c2.image_to_frame(
+            curtain_c2.canvas_to_image(image, cols, rows, self.layout),
+            controller_side=controller_side or self.controller_side,
+            flip=self.flip if flip is None else flip,
+            cols=cols,
+            rows=rows,
+        )
+
     def _apply_curtain_assumed(self, state: LightState) -> LightState:
         """Add the color and brightness the curtain never reports.
 
@@ -493,7 +532,7 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
                             else:
                                 name = step.value
                                 if name == sequence.RANDOM:
-                                    names = effects.available(*self.curtain_grid)
+                                    names = effects.available(*self.canvas)
                                     names = [n for n in names if n != self.animation_name]
                                     name = random.choice(names)
                                 await animation.async_show_effect(self.hass, self, name)
@@ -514,11 +553,14 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
                 self.sequence_index = None
                 self.async_update_listeners()
 
-    # The text controls redraw the text of the Text box when they change, so the user sees
-    # what each one does. Changes made while one upload runs are sent together after it.
+    # The text controls redraw the text of the Text box when they change, and the layout
+    # controls redraw whatever was shown last, so the user sees what each one does.
+    # Changes made while one upload runs are sent together after it.
     text_value: str | None = None  # the line of the Text box
+    last_shown: tuple[str, str] | None = None  # ("text" or "effect", value) sent last
     _text_refresh_task: asyncio.Task[None] | None = None
     _text_refresh_dirty = False
+    _refresh_last = False
     _text_refresh_delay = 1.0  # seconds to wait for more changes; 0 in tests
 
     def async_refresh_text(self) -> None:
@@ -527,7 +569,17 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
         Nothing is sent if the box is empty or a sequence is running: the sequence picks
         the new settings up at its next text step.
         """
-        if not self.text_value or self.sequence_running or not self.is_curtain:
+        if self.text_value:
+            self._async_schedule_refresh()
+
+    def async_refresh_layout(self) -> None:
+        """Draw again what was shown last (a text or a built-in effect) with the new layout."""
+        if self.last_shown or self.text_value:
+            self._refresh_last = True
+            self._async_schedule_refresh()
+
+    def _async_schedule_refresh(self) -> None:
+        if self.sequence_running or not self.is_curtain:
             return
         self._text_refresh_dirty = True
         if self._text_refresh_task is None or self._text_refresh_task.done():
@@ -541,14 +593,23 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
         while self._text_refresh_dirty:
             self._text_refresh_dirty = False
             await asyncio.sleep(self._text_refresh_delay)
-            if self._text_refresh_dirty or not self.text_value or self.sequence_running:
+            if self._text_refresh_dirty or self.sequence_running:
+                continue
+            kind, value = "text", self.text_value
+            if self._refresh_last and self.last_shown:
+                kind, value = self.last_shown
+            self._refresh_last = False
+            if not value:
                 continue
             try:
-                await animation.async_show_text(
-                    self.hass, self, self.text_value, **self.text_settings(self.text_value)
-                )
+                if kind == "effect":
+                    await animation.async_show_effect(self.hass, self, value)
+                else:
+                    await animation.async_show_text(
+                        self.hass, self, value, **self.text_settings(value)
+                    )
             except animation.AnimationError as err:
-                _LOGGER.warning("Could not redraw the text: %s", err)
+                _LOGGER.warning("Could not redraw the %s: %s", kind, err)
 
     def text_settings(self, value: str | None = None) -> dict[str, Any]:
         """Keyword arguments for ``animation.async_show_text`` from the text controls.
@@ -559,7 +620,7 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
         """
         settings = self._text_settings()
         if value is not None and settings["scroll"] is False:
-            cols, rows = self.curtain_grid
+            cols, rows = self.canvas
             try:
                 text_render.render_text(
                     value,

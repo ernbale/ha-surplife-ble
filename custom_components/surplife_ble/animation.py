@@ -234,6 +234,46 @@ async def async_upload(
     cols, rows = coordinator.curtain_grid
     # The service default is the 20 x 20 limit (128). A larger grid holds fewer frames.
     max_frames = min(max_frames, curtain_c2.max_upload_frames(cols, rows))
+    layout = coordinator.layout
+    if layout != curtain_c2.Layout():
+        # Decode for the canvas the layout leaves, then place every frame on the device.
+        try:
+            width, height = coordinator.canvas
+        except ValueError as err:
+            raise AnimationError(str(err)) from err
+        decoded = await hass.async_add_executor_job(
+            partial(
+                decode_animation,
+                source.data,
+                resample=resample,
+                max_frames=max_frames,
+                cols=width,
+                rows=height,
+            )
+        )
+        frames = [
+            coordinator.canvas_frame(
+                curtain_c2.frame_to_image(frame, cols=width, rows=height),
+                controller_side=controller_side,
+                flip=flip,
+            )
+            for frame in decoded.frames
+        ]
+        try:
+            await coordinator.async_upload_animation(
+                frames,
+                mode=mode,
+                speed=speed,
+                brightness_percent=brightness,
+                title=source.name,
+                preview_png=decoded.preview_png,
+            )
+        except (
+            curtain_c2.CurtainUploadError, RuntimeError, ValueError, OSError, TimeoutError
+        ) as err:
+            raise AnimationError(str(err)) from err
+        coordinator.last_shown = None
+        return len(frames)
     decoded = await hass.async_add_executor_job(
         partial(
             decode_animation,
@@ -285,7 +325,10 @@ async def async_show_text(
         raise AnimationError(
             "this device is not an IOTBT curtain or net, or it is not connected yet"
         )
-    cols, rows = coordinator.curtain_grid
+    try:
+        cols, rows = coordinator.canvas
+    except ValueError as err:
+        raise AnimationError(str(err)) from err
 
     def _render() -> tuple[list[list[curtain_c2.RGB]], bytes]:
         rendered = text_render.render_text(
@@ -298,18 +341,9 @@ async def async_show_text(
             size=size,
             background=background,
             rainbow=rainbow,
-            max_frames=curtain_c2.max_upload_frames(cols, rows),
+            max_frames=curtain_c2.max_upload_frames(*coordinator.curtain_grid),
         )
-        frames = [
-            curtain_c2.image_to_frame(
-                frame,
-                controller_side=coordinator.controller_side,
-                flip=coordinator.flip,
-                cols=cols,
-                rows=rows,
-            )
-            for frame in rendered.frames
-        ]
+        frames = [coordinator.canvas_frame(frame) for frame in rendered.frames]
         return frames, text_render.render_strip_png(rendered.strip)
 
     try:
@@ -330,6 +364,7 @@ async def async_show_text(
         )
     except (curtain_c2.CurtainUploadError, RuntimeError, ValueError, OSError, TimeoutError) as err:
         raise AnimationError(str(err)) from err
+    coordinator.last_shown = ("text", text)
     return len(frames)
 
 
@@ -349,23 +384,17 @@ async def async_show_effect(
         raise AnimationError(
             "this device is not an IOTBT curtain or net, or it is not connected yet"
         )
-    cols, rows = coordinator.curtain_grid
+    try:
+        cols, rows = coordinator.canvas
+    except ValueError as err:
+        raise AnimationError(str(err)) from err
 
     def _render() -> tuple[list[list[curtain_c2.RGB]], bytes]:
         images = effects.build(name, cols, rows)
-        limit = curtain_c2.max_upload_frames(cols, rows)
+        limit = curtain_c2.max_upload_frames(*coordinator.curtain_grid)
         if len(images) > limit:
             raise ValueError(f"effect {name} has {len(images)} frames, the device holds {limit}")
-        frames = [
-            curtain_c2.image_to_frame(
-                image,
-                controller_side=coordinator.controller_side,
-                flip=coordinator.flip,
-                cols=cols,
-                rows=rows,
-            )
-            for image in images
-        ]
+        frames = [coordinator.canvas_frame(image) for image in images]
         preview = curtain_c2.render_preview_png(images[len(images) // 3], cols=cols, rows=rows)
         return frames, preview
 
@@ -381,4 +410,5 @@ async def async_show_effect(
         )
     except (curtain_c2.CurtainUploadError, RuntimeError, ValueError, OSError, TimeoutError) as err:
         raise AnimationError(str(err)) from err
+    coordinator.last_shown = ("effect", name)
     return len(frames)

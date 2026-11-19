@@ -1335,8 +1335,8 @@ async def test_show_effect_service_uploads_the_effect_at_its_speed(ha: SimpleNam
     assert uploads(fake) == [len(effects.build("rain", 20, 20))]
     assert fake.payloads[-1] == bytes((0xE2, 0x09, 1, effects.EFFECTS["rain"].speed, 100, 0))
     assert coordinator.animation_name == "rain"
-    with pytest.raises(ha.animation.AnimationError, match="at least 32x16"):
-        await light.async_show_effect(**vol.Schema(ha.services.EFFECT_SCHEMA)({"effect": "heart"}))
+    with pytest.raises(ha.animation.AnimationError, match="at least 32x"):
+        await light.async_show_effect(**vol.Schema(ha.services.EFFECT_SCHEMA)({"effect": "sleigh"}))
 
 
 @pytest.mark.asyncio
@@ -1460,3 +1460,23 @@ async def test_sequence_random_step_shows_a_built_in_effect(ha: SimpleNamespace)
     await coordinator._sequence_task
     assert coordinator.animation_name in effects.available(20, 20)
     assert uploads(fake) == [len(effects.build(coordinator.animation_name, 20, 20))]
+
+
+@pytest.mark.asyncio
+async def test_layout_change_redraws_what_was_shown_last(ha: SimpleNamespace) -> None:
+    coordinator, fake = await make_curtain(ha)
+    coordinator._text_refresh_delay = 0
+    light = ha.light.SurplifeLight(coordinator, FakeEntry())
+    await light.async_show_effect(**vol.Schema(ha.services.EFFECT_SCHEMA)({"effect": "rain"}))
+    assert coordinator.last_shown == ("effect", "rain")
+    coordinator.layout_top, coordinator.layout_bottom = "4", "6"
+    assert coordinator.canvas == (20, 10)
+    coordinator.async_refresh_layout()
+    await coordinator._text_refresh_task
+    assert uploads(fake) == [len(effects.build("rain", 20, 20)), len(effects.build("rain", 20, 10))]
+    coordinator.layout_rotation = "90"
+    coordinator.text_value = "hi"
+    coordinator.async_refresh_text()
+    await coordinator._text_refresh_task
+    assert coordinator.last_shown == ("text", "hi")
+    assert len(uploads(fake)) == 3

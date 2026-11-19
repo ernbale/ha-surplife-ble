@@ -109,6 +109,12 @@ and warm glow. Pictures, from 32x16 up: heart, star, heart and star, Christmas t
 sleigh, smiley, moon and stars, gift and snowman. The `surplife_ble.show_effect` service
 does the same.
 
+**Layout.** For a net hung sideways or partly hidden, the device page has Rotation (90, 180
+or 270 degrees) and four selectors that leave rows or columns of LEDs dark at the top, bottom,
+left and right, for example the rows behind a railing. Texts, effects and uploaded pictures
+are drawn on the LEDs that remain. Changing one draws again the text or effect shown last.
+The pictures that need more room than what is left disappear from the Animation selector.
+
 **Sequences.** A sequence shows effects and texts one after the other, each for its own
 time, and starts again after the last one. Write it in the Sequence text box as one line,
 with the steps separated by `;`, then turn on the Sequence running switch:

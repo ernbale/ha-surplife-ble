@@ -342,6 +342,72 @@ def pixel_index(
     return column * rows + row
 
 
+ROTATIONS = (0, 90, 180, 270)
+
+
+class Layout(NamedTuple):
+    """How the picture sits on the LEDs: turned, and with lines left dark.
+
+    ``rotation`` turns the picture clockwise by 90, 180 or 270 degrees, for a net hung
+    sideways or upside down. ``top``, ``bottom``, ``left`` and ``right`` are lines of LEDs
+    kept dark on each side, as the viewer sees them after the rotation: for a part of the
+    net that is folded away or hidden, for example behind a railing.
+    """
+
+    rotation: int = 0
+    top: int = 0
+    bottom: int = 0
+    left: int = 0
+    right: int = 0
+
+
+NO_LAYOUT = Layout()
+
+
+def canvas_size(cols: int, rows: int, layout: Layout = NO_LAYOUT) -> tuple[int, int]:
+    """(columns, rows) left to draw on a ``cols`` x ``rows`` device with ``layout``."""
+    if layout.rotation not in ROTATIONS:
+        raise ValueError("rotation must be 0, 90, 180 or 270")
+    if min(layout.top, layout.bottom, layout.left, layout.right) < 0:
+        raise ValueError("excluded lines cannot be negative")
+    if layout.rotation in (90, 270):
+        cols, rows = rows, cols
+    width = cols - layout.left - layout.right
+    height = rows - layout.top - layout.bottom
+    if width < 1 or height < 1:
+        raise ValueError("the excluded lines leave no LEDs to draw on")
+    return width, height
+
+
+def canvas_to_image(
+    pixels: Sequence[RGB], cols: int, rows: int, layout: Layout = NO_LAYOUT
+) -> list[RGB]:
+    """Place a canvas picture on the device. Returns row-major pixels of ``cols`` x ``rows``.
+
+    ``pixels`` is row-major and has the size :func:`canvas_size` gives. The excluded lines
+    stay black.
+    """
+    width, height = canvas_size(cols, rows, layout)
+    if len(pixels) != width * height:
+        raise ValueError(f"a canvas frame needs {width * height} pixels, got {len(pixels)}")
+    if layout == NO_LAYOUT:
+        return list(pixels)
+    image: list[RGB] = [(0, 0, 0)] * (cols * rows)
+    for cy in range(height):
+        for cx in range(width):
+            vx, vy = cx + layout.left, cy + layout.top
+            if layout.rotation == 0:
+                px, py = vx, vy
+            elif layout.rotation == 90:
+                px, py = cols - 1 - vy, vx
+            elif layout.rotation == 180:
+                px, py = cols - 1 - vx, rows - 1 - vy
+            else:
+                px, py = vy, rows - 1 - vx
+            image[py * cols + px] = pixels[cy * width + cx]
+    return image
+
+
 def image_to_frame(
     pixels: Sequence[RGB],
     *,

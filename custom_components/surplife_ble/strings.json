@@ -366,6 +366,27 @@
           "gift": "Gift",
           "snowman": "Snowman"
         }
+      },
+      "layout_rotation": {
+        "name": "Rotation",
+        "state": {
+          "0": "Not rotated",
+          "90": "90° clockwise",
+          "180": "180° (upside down)",
+          "270": "270° clockwise"
+        }
+      },
+      "layout_top": {
+        "name": "Rows excluded at the top"
+      },
+      "layout_bottom": {
+        "name": "Rows excluded at the bottom"
+      },
+      "layout_left": {
+        "name": "Columns excluded on the left"
+      },
+      "layout_right": {
+        "name": "Columns excluded on the right"
       }
     },
     "switch": {
