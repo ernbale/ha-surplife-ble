@@ -4,7 +4,7 @@ from datetime import timedelta
 
 DOMAIN = "surplife_ble"
 # The media_player, image and number platforms add entities only for the IOTBT curtain.
-PLATFORMS = ["light", "media_player", "image", "number"]
+PLATFORMS = ["light", "media_player", "image", "number", "text", "select", "switch"]
 UPDATE_INTERVAL = timedelta(seconds=15)
 
 # Options of the config entry: color calibration for the IOTBT curtain (see

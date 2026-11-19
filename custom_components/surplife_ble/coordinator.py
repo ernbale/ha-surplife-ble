@@ -435,6 +435,33 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
         self._request_confirmation()
         self.async_update_listeners()
 
+    # Settings of the text controls (Text, Text size, Text scroll, Text color, Text bold).
+    # They are kept here so the entities share them. The entities restore them at startup.
+    TEXT_COLORS: dict[str, tuple[int, int, int]] = {
+        "yellow": (255, 200, 0),
+        "white": (255, 255, 255),
+        "red": (255, 0, 0),
+        "orange": (255, 110, 0),
+        "green": (0, 220, 0),
+        "cyan": (0, 220, 220),
+        "blue": (0, 80, 255),
+        "magenta": (255, 0, 170),
+    }
+    text_size: str = "auto"  # auto, small, medium, large
+    text_scroll: str = "auto"  # auto, always, never
+    text_color: str = "yellow"
+    text_bold: bool = True
+
+    def text_settings(self) -> dict[str, Any]:
+        """Keyword arguments for ``animation.async_show_text`` from the text controls."""
+        return {
+            "color": self.TEXT_COLORS.get(self.text_color, self.TEXT_COLORS["yellow"]),
+            "bold": self.text_bold,
+            "scroll": {"always": True, "never": False}.get(self.text_scroll),
+            "size": None if self.text_size == "auto" else self.text_size,
+            "speed": self.animation_speed,
+        }
+
     def async_set_preview(self, preview_png: bytes, title: str | None = None) -> None:
         """Show a picture in the Screen preview without sending anything to the device."""
         self.animation_title = title

@@ -45,7 +45,11 @@ def curtain_device_info(coordinator: SurplifeCoordinator) -> DeviceInfo:
         identifiers={(DOMAIN, coordinator.address)},
         connections={(dr.CONNECTION_BLUETOOTH, coordinator.address)},
         manufacturer="MIHEAL / Surplife",
-        model="Curtain lights (IOTBT, product 0xC2)",
+        model=(
+            "Net lights 32x16 (IOTBT, product 0x71)"
+            if coordinator.curtain_grid == (32, 16)
+            else "Curtain lights (IOTBT, product 0xC2)"
+        ),
         name=coordinator.config_entry.title,
     )
 

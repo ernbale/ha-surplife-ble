@@ -93,6 +93,10 @@ data:
   speed: 75
 ```
 
+**Text controls.** The device page also has a Text box, with Text size, Text scrolling,
+Text color and Text bold next to it. Typing a text shows it with those settings, at the
+speed of the Animation speed slider. The names are translated to Italian.
+
 **Examples.** [examples/net_32x16](examples/net_32x16) has eleven ready-made animations
 (heart, star, tree, comet, sleigh, rainbow, snow, sparkles, text) and the script that draws
 them.

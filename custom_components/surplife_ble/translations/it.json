@@ -1,0 +1,46 @@
+{
+  "entity": {
+    "text": {
+      "text": {
+        "name": "Scritta"
+      }
+    },
+    "select": {
+      "text_size": {
+        "name": "Grandezza scritta",
+        "state": {
+          "auto": "Automatica",
+          "small": "Piccola (7 LED)",
+          "medium": "Media (10 LED)",
+          "large": "Grande (14 LED)"
+        }
+      },
+      "text_scroll": {
+        "name": "Scorrimento scritta",
+        "state": {
+          "auto": "Solo se non ci sta",
+          "always": "Sempre",
+          "never": "Mai"
+        }
+      },
+      "text_color": {
+        "name": "Colore scritta",
+        "state": {
+          "yellow": "Giallo",
+          "white": "Bianco",
+          "red": "Rosso",
+          "orange": "Arancione",
+          "green": "Verde",
+          "cyan": "Azzurro",
+          "blue": "Blu",
+          "magenta": "Fucsia"
+        }
+      }
+    },
+    "switch": {
+      "text_bold": {
+        "name": "Scritta in grassetto"
+      }
+    }
+  }
+}

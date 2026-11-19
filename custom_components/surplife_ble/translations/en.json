@@ -172,5 +172,49 @@
         "large": "Large (14 LEDs)"
       }
     }
+  },
+  "entity": {
+    "text": {
+      "text": {
+        "name": "Text"
+      }
+    },
+    "select": {
+      "text_size": {
+        "name": "Text size",
+        "state": {
+          "auto": "Automatic",
+          "small": "Small (7 LEDs)",
+          "medium": "Medium (10 LEDs)",
+          "large": "Large (14 LEDs)"
+        }
+      },
+      "text_scroll": {
+        "name": "Text scrolling",
+        "state": {
+          "auto": "Only if it does not fit",
+          "always": "Always",
+          "never": "Never"
+        }
+      },
+      "text_color": {
+        "name": "Text color",
+        "state": {
+          "yellow": "Yellow",
+          "white": "White",
+          "red": "Red",
+          "orange": "Orange",
+          "green": "Green",
+          "cyan": "Cyan",
+          "blue": "Blue",
+          "magenta": "Magenta"
+        }
+      }
+    },
+    "switch": {
+      "text_bold": {
+        "name": "Text bold"
+      }
+    }
   }
 }
