@@ -490,8 +490,13 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
                     for _attempt in range(3):
                         try:
                             if step.kind == "text":
+                                settings = self.text_settings()
+                                if settings["scroll"] is False:
+                                    # "Never scroll" would refuse a text wider than the
+                                    # screen and the step would be lost. Scroll that one.
+                                    settings["scroll"] = None
                                 await animation.async_show_text(
-                                    self.hass, self, step.value, **self.text_settings()
+                                    self.hass, self, step.value, **settings
                                 )
                             else:
                                 await animation.async_show_effect(self.hass, self, step.value)
@@ -501,6 +506,8 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
                             # Usually the Bluetooth link dropped. Wait for it and retry.
                             _LOGGER.warning("Sequence step %s failed: %s", index + 1, err)
                             await self._sequence_sleep(15)
+                    else:
+                        continue  # the step never got on the device: go to the next one
                     await self._sequence_sleep(step.seconds)
                 if not repeat:
                     break

@@ -1394,3 +1394,24 @@ async def test_sequence_errors_are_reported_before_it_starts(ha: SimpleNamespace
     with pytest.raises(ha.animation.AnimationError, match="no steps"):
         await light.async_play_sequence(**vol.Schema(ha.services.SEQUENCE_SCHEMA)({}))
     assert not coordinator.sequence_running
+
+
+@pytest.mark.asyncio
+async def test_sequence_scrolls_a_text_too_wide_for_never_scroll(ha: SimpleNamespace) -> None:
+    coordinator, fake = await make_curtain(ha)
+    light = ha.light.SurplifeLight(coordinator, FakeEntry())
+    coordinator.text_scroll = "never"
+    waits: list[float] = []
+
+    async def fast_sleep(seconds: float) -> None:
+        waits.append(seconds)
+
+    coordinator._sequence_sleep = fast_sleep
+    data = vol.Schema(ha.services.SEQUENCE_SCHEMA)(
+        {"sequence": "hi 20s; buon natale 40s", "repeat": False}
+    )
+    await light.async_play_sequence(**data)
+    await coordinator._sequence_task
+    assert waits == [20, 40]  # no retries: both steps got on the device
+    assert uploads(fake)[0] == 1  # the short text stays still
+    assert uploads(fake)[1] > 1  # the long one scrolls instead of failing
