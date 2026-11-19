@@ -93,3 +93,11 @@ def test_sizes_set_the_letter_height_and_large_doubles_the_width() -> None:
         text.render_text("H", cols=20, rows=12, size="large")
     with pytest.raises(ValueError, match="size must be"):
         text.render_text("H", cols=32, rows=16, size="huge")
+
+
+def test_background_fills_the_leds_around_the_letters() -> None:
+    blue = (0, 80, 255)
+    frame = text.render_text("HI", cols=32, rows=16, background=blue).frames[0]
+    assert set(frame) == {blue, YELLOW}
+    scrolling = text.render_text("BUON NATALE", cols=32, rows=16, background=blue)
+    assert set(scrolling.frames[0]) == {blue}

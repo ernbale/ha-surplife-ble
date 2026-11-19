@@ -186,10 +186,23 @@ class SurplifeLight(CoordinatorEntity[SurplifeCoordinator], LightEntity):
             bold=kwargs["bold"],
             scroll=kwargs.get("scroll"),
             size=kwargs.get("size"),
+            background=tuple(kwargs["background"]),
             speed=kwargs["speed"],
             brightness=kwargs["brightness"],
             preview_only=kwargs["preview_only"],
         )
+
+    async def async_show_effect(self, **kwargs: Any) -> None:
+        """Service: draw a built-in effect, upload it and play it."""
+        await animation.async_show_effect(
+            self.hass,
+            self.coordinator,
+            kwargs["effect"],
+            speed=kwargs.get("speed"),
+            brightness=kwargs["brightness"],
+        )
+        self.coordinator.animation_name = kwargs["effect"]
+        self.coordinator.async_update_listeners()
 
     async def async_play_animation(self, **kwargs: Any) -> None:
         """Service: play the animation stored in the curtain's flash."""

@@ -35,11 +35,70 @@
           "blue": "Blu",
           "magenta": "Fucsia"
         }
+      },
+      "text_background": {
+        "name": "Sfondo scritta",
+        "state": {
+          "black": "Nero (spento)",
+          "yellow": "Giallo",
+          "white": "Bianco",
+          "red": "Rosso",
+          "orange": "Arancione",
+          "green": "Verde",
+          "cyan": "Azzurro",
+          "blue": "Blu",
+          "magenta": "Fucsia"
+        }
+      },
+      "animation": {
+        "name": "Animazione",
+        "state": {
+          "sparkle": "Luci che brillano a caso",
+          "sparkle_gold": "Luci che brillano, bianco e oro",
+          "rain": "Pioggia",
+          "snow": "Neve",
+          "matrix": "Pioggia verde",
+          "fire": "Fuoco",
+          "fireworks": "Fuochi d'artificio",
+          "rainbow": "Arcobaleno",
+          "plasma": "Nuvole di colore",
+          "color_fade": "Tinta che cambia",
+          "flag_italy": "Tricolore",
+          "heart": "Cuore",
+          "star": "Stella",
+          "heart_and_star": "Cuore e stella",
+          "tree": "Albero di Natale",
+          "comet": "Stella cometa",
+          "sleigh": "Slitta"
+        }
       }
     },
     "switch": {
       "text_bold": {
         "name": "Scritta in grassetto"
+      }
+    }
+  },
+  "selector": {
+    "animation": {
+      "options": {
+        "sparkle": "Luci che brillano a caso",
+        "sparkle_gold": "Luci che brillano, bianco e oro",
+        "rain": "Pioggia",
+        "snow": "Neve",
+        "matrix": "Pioggia verde",
+        "fire": "Fuoco",
+        "fireworks": "Fuochi d'artificio",
+        "rainbow": "Arcobaleno",
+        "plasma": "Nuvole di colore",
+        "color_fade": "Tinta che cambia",
+        "flag_italy": "Tricolore",
+        "heart": "Cuore",
+        "star": "Stella",
+        "heart_and_star": "Cuore e stella",
+        "tree": "Albero di Natale",
+        "comet": "Stella cometa",
+        "sleigh": "Slitta"
       }
     }
   }

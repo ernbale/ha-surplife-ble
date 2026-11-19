@@ -1,23 +1,31 @@
 # Example animations for the 32 x 16 net light
 
-Eleven animations drawn at 32 x 16, one image pixel per LED, for the net light with product
-ID `0x0071`. They are original drawings made for this repository.
+Animations drawn at 32 x 16, one image pixel per LED, for the net light with product ID
+`0x0071`. They are original and are drawn in code by `core/effects.py`, so the Animation
+selector of the device shows the same ones without any file.
 
 ![Preview](preview.png)
 
-| File | Frames | What it shows |
+| File | Frames | Name in the Animation selector |
 | --- | --- | --- |
-| `heart.gif` | 12 | A red heart that beats |
-| `star.gif` | 8 | A yellow star with a white core that grows and shrinks |
-| `heart_and_star.gif` | 8 | Both, side by side |
-| `tree.gif` | 12 | A Christmas tree with blinking balls and two presents |
-| `comet.gif` | 48 | A comet that crosses from left to right |
-| `sleigh.gif` | 60 | A sleigh and a reindeer that cross under the moon |
-| `rainbow.gif` | 24 | Diagonal rainbow bands that move sideways |
-| `snow.gif` | 16 | Big snowflakes falling at two speeds |
-| `sparkle.gif` | 48 | Many colored lights that flash at random places |
-| `sparkle_white.gif` | 48 | The same in white and gold |
-| `scrolling_text.gif` | 100 | Bold scrolling text (the `show_text` service does this for any text) |
+| `color_fade.gif` | 36 | Color fade |
+| `comet.gif` | 48 | Comet |
+| `fire.gif` | 24 | Fire |
+| `fireworks.gif` | 36 | Fireworks |
+| `flag_italy.gif` | 16 | Italian flag |
+| `heart.gif` | 4 | Heart |
+| `heart_and_star.gif` | 6 | Heart and star |
+| `matrix.gif` | 26 | Green rain |
+| `plasma.gif` | 32 | Color clouds |
+| `rain.gif` | 23 | Rain |
+| `rainbow.gif` | 24 | Rainbow |
+| `scrolling_text.gif` | 100 | Scrolling text (the Text box does this for any text) |
+| `sleigh.gif` | 59 | Sleigh |
+| `snow.gif` | 16 | Snow |
+| `sparkle.gif` | 48 | Sparkling lights |
+| `sparkle_gold.gif` | 48 | Sparkling lights, white and gold |
+| `star.gif` | 6 | Star |
+| `tree.gif` | 8 | Christmas tree |
 
 ## Use them in Home Assistant
 
@@ -34,7 +42,7 @@ data:
 ```
 
 `resample: nearest` keeps the pixels as drawn. Speeds that look right: 45 for the tree, 55
-for the heart and the star, 70 to 75 for the comet, the sleigh and the text.
+for the heart, the star and the snow, 65 to 80 for the others.
 
 ## What reads well on this net
 

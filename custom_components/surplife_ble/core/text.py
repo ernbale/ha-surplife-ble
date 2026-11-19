@@ -151,6 +151,7 @@ def render_text(
     max_frames: int = 100,
     scroll: bool | None = None,
     size: str | None = None,
+    background: RGB = BLACK,
 ) -> TextAnimation:
     """Render ``text`` as one static frame or as a right-to-left scrolling animation.
 
@@ -160,6 +161,7 @@ def render_text(
 
     ``size`` is described in :func:`row_repeats`. Large text doubles every pixel of the
     plain glyph, so its strokes are already two LEDs wide and ``bold`` is ignored.
+    ``background`` fills every LED that is not part of a letter.
     """
     repeats = row_repeats(rows, size)
     large = repeats == _ROW_REPEATS["large"]
@@ -174,7 +176,7 @@ def render_text(
     top = (rows - height) // 2
 
     def paint(source: list[list[bool]], width: int) -> list[list[RGB]]:
-        grid = [[BLACK] * width for _ in range(rows)]
+        grid = [[background] * width for _ in range(rows)]
         for x in range(width):
             y = top
             for r, repeat in enumerate(repeats):

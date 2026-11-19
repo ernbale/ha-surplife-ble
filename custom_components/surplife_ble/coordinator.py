@@ -450,12 +450,19 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
     text_size: str = "auto"  # auto, small, medium, large
     text_scroll: str = "auto"  # auto, always, never
     text_color: str = "yellow"
+    text_background: str = "black"
     text_bold: bool = True
+    animation_name: str | None = None  # the built-in effect chosen last, for the selector
 
     def text_settings(self) -> dict[str, Any]:
         """Keyword arguments for ``animation.async_show_text`` from the text controls."""
         return {
             "color": self.TEXT_COLORS.get(self.text_color, self.TEXT_COLORS["yellow"]),
+            "background": (
+                (0, 0, 0)
+                if self.text_background == "black"
+                else self.TEXT_COLORS.get(self.text_background, (0, 0, 0))
+            ),
             "bold": self.text_bold,
             "scroll": {"always": True, "never": False}.get(self.text_scroll),
             "size": None if self.text_size == "auto" else self.text_size,

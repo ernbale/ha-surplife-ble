@@ -18,7 +18,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.network import get_url
 
-from .core import curtain_c2
+from .core import curtain_c2, effects
 from .core import text as text_render
 
 if TYPE_CHECKING:
@@ -269,6 +269,7 @@ async def async_show_text(
     bold: bool = True,
     scroll: bool | None = None,
     size: str | None = None,
+    background: tuple[int, int, int] = (0, 0, 0),
     speed: int = 75,
     brightness: int = 100,
     preview_only: bool = False,
@@ -294,6 +295,7 @@ async def async_show_text(
             bold=bold,
             scroll=scroll,
             size=size,
+            background=background,
             max_frames=curtain_c2.max_upload_frames(cols, rows),
         )
         frames = [
@@ -322,6 +324,57 @@ async def async_show_text(
             speed=speed,
             brightness_percent=brightness,
             title=text,
+            preview_png=preview,
+        )
+    except (curtain_c2.CurtainUploadError, RuntimeError, ValueError, OSError, TimeoutError) as err:
+        raise AnimationError(str(err)) from err
+    return len(frames)
+
+
+async def async_show_effect(
+    hass: HomeAssistant,
+    coordinator: SurplifeCoordinator,
+    name: str,
+    *,
+    speed: int | None = None,
+    brightness: int = 100,
+) -> int:
+    """Draw built-in effect ``name`` for the grid of the device, upload and play it.
+
+    ``speed`` defaults to the speed that suits the effect. Returns the frame count.
+    """
+    if not coordinator.is_curtain:
+        raise AnimationError(
+            "this device is not an IOTBT curtain or net, or it is not connected yet"
+        )
+    cols, rows = coordinator.curtain_grid
+
+    def _render() -> tuple[list[list[curtain_c2.RGB]], bytes]:
+        images = effects.build(name, cols, rows)
+        limit = curtain_c2.max_upload_frames(cols, rows)
+        if len(images) > limit:
+            raise ValueError(f"effect {name} has {len(images)} frames, the device holds {limit}")
+        frames = [
+            curtain_c2.image_to_frame(
+                image,
+                controller_side=coordinator.controller_side,
+                flip=coordinator.flip,
+                cols=cols,
+                rows=rows,
+            )
+            for image in images
+        ]
+        preview = curtain_c2.render_preview_png(images[len(images) // 3], cols=cols, rows=rows)
+        return frames, preview
+
+    try:
+        frames, preview = await hass.async_add_executor_job(_render)
+        await coordinator.async_upload_animation(
+            frames,
+            mode=curtain_c2.DEFAULT_PLAY_MODE,
+            speed=speed if speed is not None else effects.EFFECTS[name].speed,
+            brightness_percent=brightness,
+            title=name,
             preview_png=preview,
         )
     except (curtain_c2.CurtainUploadError, RuntimeError, ValueError, OSError, TimeoutError) as err:

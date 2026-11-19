@@ -100,6 +100,10 @@
           "name": "Color",
           "description": "Color of the letters. Fully saturated colors look best."
         },
+        "background": {
+          "name": "Background",
+          "description": "Color of the LEDs around the letters. Black leaves them off, which reads best."
+        },
         "bold": {
           "name": "Bold",
           "description": "Strokes two LEDs wide. Easier to read on a coarse grid."
@@ -123,6 +127,24 @@
         "preview_only": {
           "name": "Preview only",
           "description": "Only update the Screen preview. Nothing is sent to the device."
+        }
+      }
+    },
+    "show_effect": {
+      "name": "Show effect",
+      "description": "Draw one of the built-in effects for the grid of the device, store it in the flash memory and play it. Do not call this often.",
+      "fields": {
+        "effect": {
+          "name": "Effect",
+          "description": "The effect to show. Pictures such as the heart need at least 32x16 LEDs."
+        },
+        "speed": {
+          "name": "Speed",
+          "description": "Playback speed from 1 to 100. Empty: the speed that suits the effect."
+        },
+        "brightness": {
+          "name": "Brightness",
+          "description": "Brightness from 1 to 100."
         }
       }
     }
@@ -171,6 +193,27 @@
         "medium": "Medium (10 LEDs)",
         "large": "Large (14 LEDs)"
       }
+    },
+    "animation": {
+      "options": {
+        "sparkle": "Sparkling lights",
+        "sparkle_gold": "Sparkling lights, white and gold",
+        "rain": "Rain",
+        "snow": "Snow",
+        "matrix": "Green rain",
+        "fire": "Fire",
+        "fireworks": "Fireworks",
+        "rainbow": "Rainbow",
+        "plasma": "Color clouds",
+        "color_fade": "Color fade",
+        "flag_italy": "Italian flag",
+        "heart": "Heart",
+        "star": "Star",
+        "heart_and_star": "Heart and star",
+        "tree": "Christmas tree",
+        "comet": "Comet",
+        "sleigh": "Sleigh"
+      }
     }
   },
   "entity": {
@@ -208,6 +251,42 @@
           "cyan": "Cyan",
           "blue": "Blue",
           "magenta": "Magenta"
+        }
+      },
+      "text_background": {
+        "name": "Text background",
+        "state": {
+          "black": "Black",
+          "yellow": "Yellow",
+          "white": "White",
+          "red": "Red",
+          "orange": "Orange",
+          "green": "Green",
+          "cyan": "Cyan",
+          "blue": "Blue",
+          "magenta": "Magenta"
+        }
+      },
+      "animation": {
+        "name": "Animation",
+        "state": {
+          "sparkle": "Sparkling lights",
+          "sparkle_gold": "Sparkling lights, white and gold",
+          "rain": "Rain",
+          "snow": "Snow",
+          "matrix": "Green rain",
+          "fire": "Fire",
+          "fireworks": "Fireworks",
+          "rainbow": "Rainbow",
+          "plasma": "Color clouds",
+          "color_fade": "Color fade",
+          "flag_italy": "Italian flag",
+          "heart": "Heart",
+          "star": "Star",
+          "heart_and_star": "Heart and star",
+          "tree": "Christmas tree",
+          "comet": "Comet",
+          "sleigh": "Sleigh"
         }
       }
     },

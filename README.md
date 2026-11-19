@@ -97,9 +97,14 @@ data:
 Text color and Text bold next to it. Typing a text shows it with those settings, at the
 speed of the Animation speed slider. The names are translated to Italian.
 
-**Examples.** [examples/net_32x16](examples/net_32x16) has eleven ready-made animations
-(heart, star, tree, comet, sleigh, rainbow, snow, sparkles, text) and the script that draws
-them.
+**Animations.** The Animation selector on the device page draws built-in effects for the
+grid of the device and plays them: sparkling lights, rain, snow, green rain, fire,
+fireworks, rainbow, color clouds, color fade, Italian flag and, from 32x16 up, heart, star,
+tree, comet and sleigh. The `surplife_ble.show_effect` service does the same. Text has a
+Text color and a Text background selector.
+
+**Examples.** [examples/net_32x16](examples/net_32x16) has the same effects as GIF files and
+the script that saves them.
 
 ## IOTBT curtain lights (product 0xC2)
 

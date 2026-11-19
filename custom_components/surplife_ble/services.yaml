@@ -100,6 +100,10 @@ show_text:
       default: [255, 200, 0]
       selector:
         color_rgb:
+    background:
+      default: [0, 0, 0]
+      selector:
+        color_rgb:
     bold:
       default: true
       selector:
@@ -133,3 +137,45 @@ show_text:
       default: false
       selector:
         boolean:
+show_effect:
+  target:
+    entity:
+      integration: surplife_ble
+      domain: light
+  fields:
+    effect:
+      required: true
+      selector:
+        select:
+          translation_key: animation
+          options:
+            - sparkle
+            - sparkle_gold
+            - rain
+            - snow
+            - matrix
+            - fire
+            - fireworks
+            - rainbow
+            - plasma
+            - color_fade
+            - flag_italy
+            - heart
+            - star
+            - heart_and_star
+            - tree
+            - comet
+            - sleigh
+    speed:
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: slider
+    brightness:
+      default: 100
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: slider
