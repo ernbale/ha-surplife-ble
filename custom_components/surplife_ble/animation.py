@@ -273,6 +273,7 @@ async def async_show_text(
     speed: int = 75,
     brightness: int = 100,
     preview_only: bool = False,
+    rainbow: bool = False,
 ) -> int:
     """Render ``text``, show it in the Screen preview and upload it. Returns the frame count.
 
@@ -296,6 +297,7 @@ async def async_show_text(
             scroll=scroll,
             size=size,
             background=background,
+            rainbow=rainbow,
             max_frames=curtain_c2.max_upload_frames(cols, rows),
         )
         frames = [

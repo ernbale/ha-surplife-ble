@@ -121,3 +121,12 @@ def test_static_text_uses_two_lines_when_one_is_not_enough() -> None:
         text.render_text("BUON NATALE", cols=32, rows=16, scroll=False, size="medium")
     with pytest.raises(ValueError, match="LEDs wide"):
         text.render_text("TANTI AUGURI A TUTTI", cols=32, rows=16, scroll=False)
+
+
+def test_rainbow_text_takes_many_colors_and_keeps_the_background() -> None:
+    animation = text.render_text(
+        "CIAO", cols=32, rows=16, rainbow=True, background=(0, 0, 9), scroll=False
+    )
+    colors = set(animation.frames[0])
+    assert (0, 0, 9) in colors
+    assert len(colors) > 6

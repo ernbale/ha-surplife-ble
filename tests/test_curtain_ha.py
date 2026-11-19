@@ -1444,3 +1444,19 @@ async def test_changing_a_text_control_redraws_the_text_box(ha: SimpleNamespace)
     assert len(uploads(fake)) == 1
     assert uploads(fake)[0] > 1  # it scrolls now
     assert coordinator.animation_title == "hi"
+
+
+@pytest.mark.asyncio
+async def test_sequence_random_step_shows_a_built_in_effect(ha: SimpleNamespace) -> None:
+    coordinator, fake = await make_curtain(ha)
+    light = ha.light.SurplifeLight(coordinator, FakeEntry())
+
+    async def fast_sleep(seconds: float) -> None:
+        return None
+
+    coordinator._sequence_sleep = fast_sleep
+    data = vol.Schema(ha.services.SEQUENCE_SCHEMA)({"sequence": "casuale 20s", "repeat": False})
+    await light.async_play_sequence(**data)
+    await coordinator._sequence_task
+    assert coordinator.animation_name in effects.available(20, 20)
+    assert uploads(fake) == [len(effects.build(coordinator.animation_name, 20, 20))]

@@ -8,24 +8,44 @@ selector of the device shows the same ones without any file.
 
 | File | Frames | Name in the Animation selector |
 | --- | --- | --- |
+| `aurora.gif` | 32 | Northern lights |
+| `bouncing_ball.gif` | 58 | Bouncing ball |
+| `candy_stripes.gif` | 8 | Candy stripes |
+| `checkerboard.gif` | 24 | Checkerboard |
+| `christmas_lights.gif` | 4 | Christmas lights |
 | `color_fade.gif` | 36 | Color fade |
 | `comet.gif` | 48 | Comet |
+| `confetti.gif` | 19 | Confetti |
+| `disco.gif` | 16 | Disco |
 | `fire.gif` | 24 | Fire |
 | `fireworks.gif` | 36 | Fireworks |
 | `flag_italy.gif` | 16 | Italian flag |
+| `gift.gif` | 4 | Gift |
 | `heart.gif` | 4 | Heart |
 | `heart_and_star.gif` | 6 | Heart and star |
+| `hearts_rain.gif` | 22 | Falling hearts |
+| `lava.gif` | 32 | Lava |
 | `matrix.gif` | 26 | Green rain |
+| `meteors.gif` | 28 | Shooting stars |
+| `moon.gif` | 4 | Moon and stars |
+| `ocean.gif` | 32 | Ocean |
+| `pinwheel.gif` | 24 | Pinwheel |
 | `plasma.gif` | 32 | Color clouds |
 | `rain.gif` | 23 | Rain |
 | `rainbow.gif` | 24 | Rainbow |
+| `ripples.gif` | 24 | Ripples |
 | `scrolling_text.gif` | 100 | Scrolling text (the Text box does this for any text) |
 | `sleigh.gif` | 59 | Sleigh |
+| `smiley.gif` | 3 | Smiley |
 | `snow.gif` | 16 | Snow |
+| `snowman.gif` | 16 | Snowman |
 | `sparkle.gif` | 48 | Sparkling lights |
 | `sparkle_gold.gif` | 48 | Sparkling lights, white and gold |
 | `star.gif` | 6 | Star |
+| `starry_night.gif` | 48 | Starry night |
 | `tree.gif` | 8 | Christmas tree |
+| `warm_glow.gif` | 24 | Warm glow |
+| `waves.gif` | 24 | Waves |
 
 ## Use them in Home Assistant
 

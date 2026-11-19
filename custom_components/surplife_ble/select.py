@@ -18,7 +18,11 @@ from .light import curtain_device_info
 SELECTS: dict[str, tuple[str, list[str], str]] = {
     "text_size": ("text_size", ["auto", "small", "medium", "large"], "mdi:format-size"),
     "text_scroll": ("text_scroll", ["auto", "always", "never"], "mdi:arrow-left-bold-box-outline"),
-    "text_color": ("text_color", list(SurplifeCoordinator.TEXT_COLORS), "mdi:palette"),
+    "text_color": (
+        "text_color",
+        [*SurplifeCoordinator.TEXT_COLORS, SurplifeCoordinator.RAINBOW],
+        "mdi:palette",
+    ),
     "text_background": (
         "text_background",
         ["black", *SurplifeCoordinator.TEXT_COLORS],

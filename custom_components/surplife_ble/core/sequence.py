@@ -39,9 +39,18 @@ def _clamp(seconds: int) -> int:
     return max(MIN_SECONDS, min(MAX_SECONDS, seconds))
 
 
+RANDOM = "random"  # a step that shows a different built-in effect every time
+_RANDOM_NAMES = ("random", "casuale", "a caso")
+
+
 def effect_key(name: str) -> str | None:
-    """Return the effect key for a key or an English or Italian name, else None."""
+    """Return the effect key for a key or an English or Italian name, else None.
+
+    ``random``, ``casuale`` and ``a caso`` give :data:`RANDOM`.
+    """
     wanted = name.strip().casefold().replace("_", " ")
+    if wanted in _RANDOM_NAMES:
+        return RANDOM
     for key, names in effects.NAMES.items():
         if wanted in (key.replace("_", " "), *(n.casefold() for n in names)):
             return key

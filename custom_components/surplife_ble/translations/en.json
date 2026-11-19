@@ -238,7 +238,27 @@
         "heart_and_star": "Heart and star",
         "tree": "Christmas tree",
         "comet": "Comet",
-        "sleigh": "Sleigh"
+        "sleigh": "Sleigh",
+        "christmas_lights": "Christmas lights",
+        "candy_stripes": "Candy stripes",
+        "confetti": "Confetti",
+        "hearts_rain": "Falling hearts",
+        "starry_night": "Starry night",
+        "meteors": "Shooting stars",
+        "aurora": "Northern lights",
+        "lava": "Lava",
+        "ocean": "Ocean",
+        "waves": "Waves",
+        "ripples": "Ripples",
+        "pinwheel": "Pinwheel",
+        "checkerboard": "Checkerboard",
+        "disco": "Disco",
+        "bouncing_ball": "Bouncing ball",
+        "warm_glow": "Warm glow",
+        "smiley": "Smiley",
+        "moon": "Moon and stars",
+        "gift": "Gift",
+        "snowman": "Snowman"
       }
     }
   },
@@ -279,7 +299,12 @@
           "green": "Green",
           "cyan": "Cyan",
           "blue": "Blue",
-          "magenta": "Magenta"
+          "magenta": "Magenta",
+          "pink": "Pink",
+          "purple": "Purple",
+          "lime": "Lime",
+          "warm_white": "Warm white",
+          "rainbow": "Rainbow"
         }
       },
       "text_background": {
@@ -293,7 +318,11 @@
           "green": "Green",
           "cyan": "Cyan",
           "blue": "Blue",
-          "magenta": "Magenta"
+          "magenta": "Magenta",
+          "pink": "Pink",
+          "purple": "Purple",
+          "lime": "Lime",
+          "warm_white": "Warm white"
         }
       },
       "animation": {
@@ -315,7 +344,27 @@
           "heart_and_star": "Heart and star",
           "tree": "Christmas tree",
           "comet": "Comet",
-          "sleigh": "Sleigh"
+          "sleigh": "Sleigh",
+          "christmas_lights": "Christmas lights",
+          "candy_stripes": "Candy stripes",
+          "confetti": "Confetti",
+          "hearts_rain": "Falling hearts",
+          "starry_night": "Starry night",
+          "meteors": "Shooting stars",
+          "aurora": "Northern lights",
+          "lava": "Lava",
+          "ocean": "Ocean",
+          "waves": "Waves",
+          "ripples": "Ripples",
+          "pinwheel": "Pinwheel",
+          "checkerboard": "Checkerboard",
+          "disco": "Disco",
+          "bouncing_ball": "Bouncing ball",
+          "warm_glow": "Warm glow",
+          "smiley": "Smiley",
+          "moon": "Moon and stars",
+          "gift": "Gift",
+          "snowman": "Snowman"
         }
       }
     },

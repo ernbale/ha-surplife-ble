@@ -36,7 +36,12 @@
           "green": "Verde",
           "cyan": "Azzurro",
           "blue": "Blu",
-          "magenta": "Fucsia"
+          "magenta": "Fucsia",
+          "pink": "Rosa",
+          "purple": "Viola",
+          "lime": "Verde lime",
+          "warm_white": "Bianco caldo",
+          "rainbow": "Arcobaleno"
         }
       },
       "text_background": {
@@ -50,7 +55,11 @@
           "green": "Verde",
           "cyan": "Azzurro",
           "blue": "Blu",
-          "magenta": "Fucsia"
+          "magenta": "Fucsia",
+          "pink": "Rosa",
+          "purple": "Viola",
+          "lime": "Verde lime",
+          "warm_white": "Bianco caldo"
         }
       },
       "animation": {
@@ -72,7 +81,27 @@
           "heart_and_star": "Cuore e stella",
           "tree": "Albero di Natale",
           "comet": "Stella cometa",
-          "sleigh": "Slitta"
+          "sleigh": "Slitta",
+          "christmas_lights": "Luci di Natale",
+          "candy_stripes": "Strisce bianche e rosse",
+          "confetti": "Coriandoli",
+          "hearts_rain": "Pioggia di cuori",
+          "starry_night": "Cielo stellato",
+          "meteors": "Stelle cadenti",
+          "aurora": "Aurora boreale",
+          "lava": "Lava",
+          "ocean": "Oceano",
+          "waves": "Onde del mare",
+          "ripples": "Cerchi nell'acqua",
+          "pinwheel": "Girandola",
+          "checkerboard": "Scacchiera",
+          "disco": "Discoteca",
+          "bouncing_ball": "Palla che rimbalza",
+          "warm_glow": "Luce calda",
+          "smiley": "Faccina",
+          "moon": "Luna e stelle",
+          "gift": "Regalo",
+          "snowman": "Pupazzo di neve"
         }
       }
     },
@@ -104,7 +133,27 @@
         "heart_and_star": "Cuore e stella",
         "tree": "Albero di Natale",
         "comet": "Stella cometa",
-        "sleigh": "Slitta"
+        "sleigh": "Slitta",
+        "christmas_lights": "Luci di Natale",
+        "candy_stripes": "Strisce bianche e rosse",
+        "confetti": "Coriandoli",
+        "hearts_rain": "Pioggia di cuori",
+        "starry_night": "Cielo stellato",
+        "meteors": "Stelle cadenti",
+        "aurora": "Aurora boreale",
+        "lava": "Lava",
+        "ocean": "Oceano",
+        "waves": "Onde del mare",
+        "ripples": "Cerchi nell'acqua",
+        "pinwheel": "Girandola",
+        "checkerboard": "Scacchiera",
+        "disco": "Discoteca",
+        "bouncing_ball": "Palla che rimbalza",
+        "warm_glow": "Luce calda",
+        "smiley": "Faccina",
+        "moon": "Luna e stelle",
+        "gift": "Regalo",
+        "snowman": "Pupazzo di neve"
       }
     }
   }

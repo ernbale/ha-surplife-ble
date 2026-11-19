@@ -6,6 +6,7 @@ layout :func:`curtain_c2.image_to_frame` takes.
 
 from __future__ import annotations
 
+import colorsys
 import unicodedata
 from typing import NamedTuple
 
@@ -238,6 +239,7 @@ def render_text(
     scroll: bool | None = None,
     size: str | None = None,
     background: RGB = BLACK,
+    rainbow: bool = False,
 ) -> TextAnimation:
     """Render ``text`` as one static frame or as a right-to-left scrolling animation.
 
@@ -247,7 +249,9 @@ def render_text(
 
     ``size`` is described in :func:`row_repeats`. Large text doubles every pixel of the
     plain glyph, so its strokes are already two LEDs wide and ``bold`` is ignored.
-    ``background`` fills every LED that is not part of a letter.
+    ``background`` fills every LED that is not part of a letter. With ``rainbow`` the
+    letters take all the colors from left to right instead of ``color``, and the colors
+    travel with the letters when the text scrolls.
     """
     repeats = row_repeats(rows, size)
     large = repeats == _ROW_REPEATS["large"]
@@ -261,14 +265,20 @@ def render_text(
     height = sum(repeats)
     top = (rows - height) // 2
 
-    def paint(source: list[list[bool]], width: int) -> list[list[RGB]]:
+    def ink(x: int) -> RGB:
+        if not rainbow:
+            return color
+        r, g, b = colorsys.hsv_to_rgb((x / 24) % 1.0, 1.0, 1.0)
+        return (round(r * 255), round(g * 255), round(b * 255))
+
+    def paint(source: list[list[bool]], width: int, shift: int = 0) -> list[list[RGB]]:
         grid = [[background] * width for _ in range(rows)]
         for x in range(width):
             y = top
             for r, repeat in enumerate(repeats):
                 for _ in range(repeat):
                     if source[x][r]:
-                        grid[y][x] = color
+                        grid[y][x] = ink(x + shift)
                     y += 1
         return grid
 
@@ -308,7 +318,7 @@ def render_text(
     step = -(-travel // max_frames)
     frames = []
     for offset in range(0, travel, step):
-        frame = paint(band[offset : offset + cols], cols)
+        frame = paint(band[offset : offset + cols], cols, offset)
         frames.append([pixel for row in frame for pixel in row])
     return TextAnimation(frames, strip, step)
 

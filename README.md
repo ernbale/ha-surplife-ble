@@ -96,13 +96,18 @@ data:
 **Text controls.** The device page also has a Text box, with Text size, Text scrolling,
 Text color and Text bold next to it. Typing a text shows it with those settings, at the
 speed of the Animation speed slider. Changing one of those controls redraws the text of the
-box. A text too wide for "never scroll" loses the bold, and scrolls if it is still too wide. The names are translated to Italian.
+box. With scrolling on "never" a wide text is made to fit: no bold, narrower letters, two
+lines if the size is small or automatic. It scrolls only if it cannot fit. Text color has
+twelve colors and Rainbow. The names are translated to Italian.
 
-**Animations.** The Animation selector on the device page draws built-in effects for the
-grid of the device and plays them: sparkling lights, rain, snow, green rain, fire,
-fireworks, rainbow, color clouds, color fade, Italian flag and, from 32x16 up, heart, star,
-tree, comet and sleigh. The `surplife_ble.show_effect` service does the same. Text has a
-Text color and a Text background selector.
+**Animations.** The Animation selector on the device page draws 37 built-in effects for
+the grid of the device and plays them. Patterns, for any grid: sparkling lights (two kinds),
+rain, snow, green rain, fire, fireworks, rainbow, color clouds, color fade, Italian flag,
+Christmas lights, candy stripes, confetti, falling hearts, starry night, shooting stars,
+northern lights, lava, ocean, waves, ripples, pinwheel, checkerboard, disco, bouncing ball
+and warm glow. Pictures, from 32x16 up: heart, star, heart and star, Christmas tree, comet,
+sleigh, smiley, moon and stars, gift and snowman. The `surplife_ble.show_effect` service
+does the same.
 
 **Sequences.** A sequence shows effects and texts one after the other, each for its own
 time, and starts again after the last one. Write it in the Sequence text box as one line,
@@ -117,6 +122,7 @@ heart 30s; BUON NATALE 1m; rain; fireworks 45s
   word is also an effect name.
 - A time is a number followed by `s` or `m` at the end of the step. Without one a step
   lasts 60 seconds. A plain number is part of the text, so `AUGURI 2027` is a text.
+- `random` (or `casuale`) is a step that shows a different built-in effect every time.
 
 The `surplife_ble.play_sequence` service takes the same line, or a list of steps, and
 `surplife_ble.stop_sequence` stops it. Choosing another effect or text, or turning the

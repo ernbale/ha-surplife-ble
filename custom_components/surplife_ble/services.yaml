@@ -166,6 +166,26 @@ show_effect:
             - tree
             - comet
             - sleigh
+            - christmas_lights
+            - candy_stripes
+            - confetti
+            - hearts_rain
+            - starry_night
+            - meteors
+            - aurora
+            - lava
+            - ocean
+            - waves
+            - ripples
+            - pinwheel
+            - checkerboard
+            - disco
+            - bouncing_ball
+            - warm_glow
+            - smiley
+            - moon
+            - gift
+            - snowman
     speed:
       selector:
         number:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -20,7 +21,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CALIBRATION_OPTIONS, CONF_CONTROLLER_SIDE, CONF_FLIP, UPDATE_INTERVAL
-from .core import curtain_c2
+from .core import curtain_c2, effects, sequence
 from .core import text as text_render
 from .core.calibration import IDENTITY, CalibrationError, ColorCalibration
 from .core.client import LightClient
@@ -437,7 +438,12 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
         "cyan": (0, 220, 220),
         "blue": (0, 80, 255),
         "magenta": (255, 0, 170),
+        "pink": (255, 110, 160),
+        "purple": (150, 0, 255),
+        "lime": (150, 255, 0),
+        "warm_white": (255, 170, 80),
     }
+    RAINBOW = "rainbow"  # a Text color choice: the letters take all the colors
     text_size: str = "auto"  # auto, small, medium, large
     text_scroll: str = "auto"  # auto, always, never
     text_color: str = "yellow"
@@ -485,8 +491,13 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
                                     self.hass, self, step.value, **self.text_settings(step.value)
                                 )
                             else:
-                                await animation.async_show_effect(self.hass, self, step.value)
-                                self.animation_name = step.value
+                                name = step.value
+                                if name == sequence.RANDOM:
+                                    names = effects.available(*self.curtain_grid)
+                                    names = [n for n in names if n != self.animation_name]
+                                    name = random.choice(names)
+                                await animation.async_show_effect(self.hass, self, name)
+                                self.animation_name = name
                             break
                         except animation.AnimationError as err:
                             # Usually the Bluetooth link dropped. Wait for it and retry.
@@ -574,6 +585,7 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
             "scroll": {"always": True, "never": False}.get(self.text_scroll),
             "size": None if self.text_size == "auto" else self.text_size,
             "speed": self.animation_speed,
+            "rainbow": self.text_color == self.RAINBOW,
         }
 
     def async_set_preview(self, preview_png: bytes, title: str | None = None) -> None:

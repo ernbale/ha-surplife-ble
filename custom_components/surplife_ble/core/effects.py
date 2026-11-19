@@ -379,6 +379,344 @@ def _sleigh_scenes() -> list[Grid]:
     return scenes
 
 
+# ---------------------------------------------------------------------------
+# More patterns: any grid size
+# ---------------------------------------------------------------------------
+
+
+def _blend(a: RGB, b: RGB, f: float) -> RGB:
+    return (
+        round(a[0] + (b[0] - a[0]) * f),
+        round(a[1] + (b[1] - a[1]) * f),
+        round(a[2] + (b[2] - a[2]) * f),
+    )
+
+
+def _ramp(stops: tuple[RGB, ...]) -> Callable[[float], RGB]:
+    """A color scale through ``stops`` for values from 0 to 1."""
+
+    def color(value: float) -> RGB:
+        value = min(max(value, 0.0), 1.0) * (len(stops) - 1)
+        n = min(int(value), len(stops) - 2)
+        return _blend(stops[n], stops[n + 1], value - n)
+
+    return color
+
+
+def _clouds(cols: int, rows: int, palette: Callable[[float], RGB]) -> Frames:
+    """The drifting blobs of ``plasma`` in the colors of ``palette``."""
+    frames = []
+    for i in range(32):
+        t = 2 * math.pi * i / 32
+        frames.append(
+            [
+                palette(
+                    (math.sin(x / 5 + t) + math.sin(y / 3 - t) + math.sin((x + y) / 7 + t)) / 4
+                    + 0.5
+                )
+                for y in range(rows)
+                for x in range(cols)
+            ]
+        )
+    return frames
+
+
+def lava(cols: int, rows: int) -> Frames:
+    return _clouds(cols, rows, _ramp(((70, 0, 0), R, ORANGE, (255, 220, 0))))
+
+
+def ocean(cols: int, rows: int) -> Frames:
+    return _clouds(cols, rows, _ramp(((0, 0, 70), (0, 60, 200), (0, 200, 220), (200, 255, 255))))
+
+
+def aurora(cols: int, rows: int) -> Frames:
+    stops = ((0, 0, 30), (0, 160, 80), (0, 255, 120), (120, 0, 200), (20, 0, 60))
+    return _clouds(cols, rows, _ramp(stops))
+
+
+def confetti(cols: int, rows: int) -> Frames:
+    """Pieces of every color falling, two LEDs tall."""
+    rng = random.Random(21)
+    period = rows + 3
+    colors = (R, Y, G, B, M, CYAN, ORANGE, W)
+    pieces = [
+        (x, rng.randrange(period), rng.choice(colors))
+        for x in range(cols)
+        for _ in range(2)
+        if rng.random() < 0.6
+    ]
+    frames = []
+    for i in range(period):
+        g = _blank(cols, rows)
+        for x, phase, color in pieces:
+            _rect(g, x, (i + phase) % period - 1, 1, 2, color)
+        frames.append(_flat(g))
+    return frames
+
+
+MINI_HEART = [".X.X.", "XXXXX", "XXXXX", ".XXX.", "..X.."]
+
+
+def hearts_rain(cols: int, rows: int) -> Frames:
+    """Small red and pink hearts falling."""
+    rng = random.Random(29)
+    period = rows + len(MINI_HEART) + 1
+    hearts = [
+        (x, rng.randrange(period), rng.choice((R, R, (255, 90, 150))))
+        for x in range(1, cols - 5, 7)
+        for _ in range(2)
+    ]
+    frames = []
+    for i in range(period):
+        g = _blank(cols, rows)
+        for x, phase, color in hearts:
+            _stamp(g, MINI_HEART, x, (i + phase) % period - len(MINI_HEART), {"X": color})
+        frames.append(_flat(g))
+    return frames
+
+
+def waves(cols: int, rows: int) -> Frames:
+    """The sea: a white crest that rolls over deepening blue."""
+    frames = []
+    for i in range(24):
+        t = 2 * math.pi * i / 24
+        g = _blank(cols, rows)
+        for x in range(cols):
+            crest = rows * 0.45 + 2.5 * math.sin(2 * math.pi * x / 16 - t)
+            crest += 1.2 * math.sin(2 * math.pi * x / 8 + t)
+            for y in range(rows):
+                if y >= crest:
+                    depth = (y - crest) / max(rows - crest, 1)
+                    g[y][x] = W if y < crest + 1 else _blend((0, 130, 255), (0, 20, 90), depth)
+        frames.append(_flat(g))
+    return frames
+
+
+def starry_night(cols: int, rows: int) -> Frames:
+    """Stars that twinkle slowly on a dark blue sky."""
+    rng = random.Random(13)
+    sky = (0, 0, 40)
+    stars = [
+        (rng.randrange(cols), rng.randrange(rows), rng.choice((12, 16, 24)), rng.randrange(48))
+        for _ in range(cols * rows // 12)
+    ]
+    frames = []
+    for i in range(48):
+        g = [[sky] * cols for _ in range(rows)]
+        for x, y, period, phase in stars:
+            glow = 0.5 + 0.5 * math.cos(2 * math.pi * (i + phase) / period)
+            g[y][x] = _blend(sky, W, glow)
+        frames.append(_flat(g))
+    return frames
+
+
+def meteors(cols: int, rows: int) -> Frames:
+    """Shooting stars that cross the screen slantwise."""
+    rng = random.Random(17)
+    tail = (W, (200, 220, 255), (120, 160, 255), (60, 90, 200), (20, 40, 120))
+    period = rows + len(tail) + 7
+    shots = [(rng.randrange(4, cols + rows), rng.randrange(period)) for _ in range(cols // 5)]
+    frames = []
+    for i in range(period):
+        g = _blank(cols, rows)
+        for x0, phase in shots:
+            step = (i + phase) % period
+            for n, color in enumerate(tail):
+                x, y = x0 - step + n, step - n
+                if 0 <= x < cols and 0 <= y < rows:
+                    g[y][x] = color
+        frames.append(_flat(g))
+    return frames
+
+
+def bouncing_ball(cols: int, rows: int) -> Frames:
+    """A ball that bounces across the screen and back, changing color."""
+    size = 3
+    span = cols - size
+    count = 2 * span
+    frames = []
+    for i in range(count):
+        x = i if i <= span else count - i
+        phase = (i * 4 / count) % 1
+        y = round((rows - size) * (1 - 4 * phase * (1 - phase)))
+        g = _blank(cols, rows)
+        _rect(g, x, y, size, size, _hue(i / count))
+        frames.append(_flat(g))
+    return frames
+
+
+def disco(cols: int, rows: int) -> Frames:
+    """Big squares that change color at random."""
+    rng = random.Random(23)
+    colors = (R, Y, G, B, M, CYAN, ORANGE, K, K)
+    frames = []
+    for _ in range(16):
+        g = _blank(cols, rows)
+        for y in range(0, rows, 4):
+            for x in range(0, cols, 4):
+                _rect(g, x, y, 4, 4, rng.choice(colors))
+        frames.append(_flat(g))
+    return frames
+
+
+def pinwheel(cols: int, rows: int) -> Frames:
+    """All the colors turning around the center."""
+    cx, cy = (cols - 1) / 2, (rows - 1) / 2
+    return [
+        [
+            _hue(math.atan2(y - cy, x - cx) / (2 * math.pi) + i / 24)
+            for y in range(rows)
+            for x in range(cols)
+        ]
+        for i in range(24)
+    ]
+
+
+def ripples(cols: int, rows: int) -> Frames:
+    """Rings that spread from the center, like a stone in water."""
+    cx, cy = (cols - 1) / 2, (rows - 1) / 2
+    frames = []
+    for i in range(24):
+        frame = []
+        for y in range(rows):
+            for x in range(cols):
+                d = math.hypot(x - cx, y - cy)
+                level = 0.5 + 0.5 * math.sin(2 * math.pi * (d / 8 - i / 24))
+                frame.append(_dim(_hue(0.5 + d / 60), level * level))
+        frames.append(frame)
+    return frames
+
+
+def christmas_lights(cols: int, rows: int) -> Frames:
+    """Rows of colored bulbs that blink in turn."""
+    colors = (R, G, Y, B)
+    frames = []
+    for i in range(8):
+        g = _blank(cols, rows)
+        for row, y in enumerate(range(1, rows - 1, 4)):
+            for n, x in enumerate(range(1 + 2 * (row % 2), cols - 1, 4)):
+                color = colors[(n + row) % len(colors)]
+                lit = (n + row + i // 2) % 2 == 0
+                _rect(g, x, y, 2, 2, color if lit else _dim(color, 0.12))
+        frames.append(_flat(g))
+    return frames
+
+
+def candy_stripes(cols: int, rows: int) -> Frames:
+    """Slanted red and white stripes that slide, like a candy cane."""
+    return [
+        [R if ((x + y + i) // 4) % 2 == 0 else W for y in range(rows) for x in range(cols)]
+        for i in range(8)
+    ]
+
+
+def checkerboard(cols: int, rows: int) -> Frames:
+    """A checkerboard of two colors that swap and slowly change."""
+    frames = []
+    for i in range(24):
+        pair = (_hue(i / 24), _hue(i / 24 + 0.5))
+        frames.append(
+            [
+                pair[(x // 4 + y // 4 + i // 3) % 2]
+                for y in range(rows)
+                for x in range(cols)
+            ]
+        )
+    return frames
+
+
+def warm_glow(cols: int, rows: int) -> Frames:
+    """The whole screen in warm light that breathes slowly."""
+    warm = (255, 150, 40)
+    return [
+        [_dim(warm, 0.6 + 0.4 * math.sin(2 * math.pi * i / 24))] * (cols * rows) for i in range(24)
+    ]
+
+
+# ---------------------------------------------------------------------------
+# More pictures: 32 x 16
+# ---------------------------------------------------------------------------
+
+
+def _disc(g: Grid, cx: float, cy: float, radius: float, color: RGB) -> None:
+    for y in range(len(g)):
+        for x in range(len(g[0])):
+            if (x - cx) ** 2 + (y - cy) ** 2 <= radius**2:
+                g[y][x] = color
+
+
+def _smiley_scenes() -> list[Grid]:
+    scenes = []
+    for i in range(12):
+        g = _scene()
+        _disc(g, 15.5, 7.5, 7.6, Y)
+        eye = 1 if i == 10 else 2  # it blinks once per loop
+        _rect(g, 12, 5 + (2 - eye), 2, eye, K)
+        _rect(g, 18, 5 + (2 - eye), 2, eye, K)
+        _rect(g, 11, 9, 1, 1, K)
+        _rect(g, 20, 9, 1, 1, K)
+        _rect(g, 12, 10, 8, 1, K)
+        _rect(g, 13, 11, 6, 1, K)
+        scenes.append(g)
+    return scenes
+
+
+def _moon_scenes() -> list[Grid]:
+    stars = [(22, 3), (27, 8), (19, 11), (4, 3), (28, 13), (24, 14)]
+    scenes = []
+    for i in range(12):
+        g = _scene()
+        _disc(g, 11.0, 7.5, 6.6, Y)
+        _disc(g, 14.0, 6.0, 5.6, K)
+        for n, (x, y) in enumerate(stars):
+            if (n + i // 3) % 2 == 0:
+                _rect(g, x - 1, y, 3, 1, W)
+                _rect(g, x, y - 1, 1, 3, W)
+            else:
+                _rect(g, x, y, 1, 1, W)
+        scenes.append(g)
+    return scenes
+
+
+def _gift_scenes() -> list[Grid]:
+    scenes = []
+    for i in range(8):
+        ribbon = Y if (i // 2) % 2 == 0 else W
+        g = _scene()
+        _rect(g, 9, 7, 14, 9, R)
+        _rect(g, 8, 5, 16, 2, (200, 0, 0))
+        _rect(g, 15, 5, 2, 11, ribbon)
+        _rect(g, 9, 10, 14, 1, ribbon)
+        _rect(g, 11, 1, 4, 3, ribbon)
+        _rect(g, 17, 1, 4, 3, ribbon)
+        _rect(g, 12, 2, 2, 1, K)
+        _rect(g, 18, 2, 2, 1, K)
+        _rect(g, 15, 3, 2, 2, ribbon)
+        scenes.append(g)
+    return scenes
+
+
+def _snowman_scenes() -> list[Grid]:
+    rng = random.Random(31)
+    flakes = [(x, rng.randrange(SCENE_ROWS)) for x in (1, 4, 7, 24, 27, 30, 2, 28)]
+    scenes = []
+    for i in range(SCENE_ROWS):
+        g = _scene()
+        for x, y0 in flakes:
+            g[(y0 + i) % SCENE_ROWS][x] = W
+        _disc(g, 15.5, 11.5, 4.6, W)
+        _disc(g, 15.5, 5.5, 3.1, W)
+        _rect(g, 13, 0, 6, 2, R)
+        _rect(g, 12, 2, 8, 1, R)
+        _rect(g, 14, 4, 1, 1, K)
+        _rect(g, 17, 4, 1, 1, K)
+        _rect(g, 15, 6, 2, 1, ORANGE)
+        _rect(g, 15, 10, 2, 1, K)
+        _rect(g, 15, 13, 2, 1, K)
+        scenes.append(g)
+    return scenes
+
+
 def _picture(scenes: Callable[[], list[Grid]]) -> Callable[[int, int], Frames]:
     """Wrap a 32 x 16 scene builder as an effect that centers it on the grid."""
 
@@ -421,6 +759,26 @@ EFFECTS: dict[str, Effect] = {
     "tree": Effect(_picture(_tree_scenes), 45, True),
     "comet": Effect(_picture(_comet_scenes), 70, True),
     "sleigh": Effect(_picture(_sleigh_scenes), 70, True),
+    "christmas_lights": Effect(christmas_lights, 40),
+    "candy_stripes": Effect(candy_stripes, 55),
+    "confetti": Effect(confetti, 70),
+    "hearts_rain": Effect(hearts_rain, 60),
+    "starry_night": Effect(starry_night, 55),
+    "meteors": Effect(meteors, 80),
+    "aurora": Effect(aurora, 60),
+    "lava": Effect(lava, 60),
+    "ocean": Effect(ocean, 60),
+    "waves": Effect(waves, 60),
+    "ripples": Effect(ripples, 65),
+    "pinwheel": Effect(pinwheel, 65),
+    "checkerboard": Effect(checkerboard, 45),
+    "disco": Effect(disco, 45),
+    "bouncing_ball": Effect(bouncing_ball, 80),
+    "warm_glow": Effect(warm_glow, 45),
+    "smiley": Effect(_picture(_smiley_scenes), 40, True),
+    "moon": Effect(_picture(_moon_scenes), 40, True),
+    "gift": Effect(_picture(_gift_scenes), 45, True),
+    "snowman": Effect(_picture(_snowman_scenes), 55, True),
 }
 
 # English and Italian names, for the sequence parser. They match the translations.
@@ -442,6 +800,26 @@ NAMES: dict[str, tuple[str, str]] = {
     "tree": ("Christmas tree", "Albero di Natale"),
     "comet": ("Comet", "Stella cometa"),
     "sleigh": ("Sleigh", "Slitta"),
+    "christmas_lights": ("Christmas lights", "Luci di Natale"),
+    "candy_stripes": ("Candy stripes", "Strisce bianche e rosse"),
+    "confetti": ("Confetti", "Coriandoli"),
+    "hearts_rain": ("Falling hearts", "Pioggia di cuori"),
+    "starry_night": ("Starry night", "Cielo stellato"),
+    "meteors": ("Shooting stars", "Stelle cadenti"),
+    "aurora": ("Northern lights", "Aurora boreale"),
+    "lava": ("Lava", "Lava"),
+    "ocean": ("Ocean", "Oceano"),
+    "waves": ("Waves", "Onde del mare"),
+    "ripples": ("Ripples", "Cerchi nell'acqua"),
+    "pinwheel": ("Pinwheel", "Girandola"),
+    "checkerboard": ("Checkerboard", "Scacchiera"),
+    "disco": ("Disco", "Discoteca"),
+    "bouncing_ball": ("Bouncing ball", "Palla che rimbalza"),
+    "warm_glow": ("Warm glow", "Luce calda"),
+    "smiley": ("Smiley", "Faccina"),
+    "moon": ("Moon and stars", "Luna e stelle"),
+    "gift": ("Gift", "Regalo"),
+    "snowman": ("Snowman", "Pupazzo di neve"),
 }
 
 

@@ -70,3 +70,13 @@ def test_effect_names_match_the_translations() -> None:
         assert italian["entity"]["select"]["animation"]["state"][key] == it
         assert sequence.effect_key(en) == key
         assert sequence.effect_key(it.upper()) == key
+
+
+def test_random_step_in_english_and_italian() -> None:
+    steps = sequence.parse("casuale 30s; a caso; Random 2m; 'casuale'")
+    assert [(s.kind, s.value) for s in steps] == [
+        ("effect", sequence.RANDOM),
+        ("effect", sequence.RANDOM),
+        ("effect", sequence.RANDOM),
+        ("text", "casuale"),
+    ]
