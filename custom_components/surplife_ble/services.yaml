@@ -179,3 +179,34 @@ show_effect:
           min: 1
           max: 100
           mode: slider
+play_sequence:
+  target:
+    entity:
+      integration: surplife_ble
+      domain: light
+  fields:
+    sequence:
+      example: "heart 30s; BUON NATALE 1m; rain"
+      selector:
+        text:
+    steps:
+      example: '[{"effect": "heart", "seconds": 30}, {"text": "BUON NATALE", "seconds": 60}]'
+      selector:
+        object:
+    seconds:
+      default: 60
+      selector:
+        number:
+          min: 20
+          max: 3600
+          unit_of_measurement: s
+          mode: box
+    repeat:
+      default: true
+      selector:
+        boolean:
+stop_sequence:
+  target:
+    entity:
+      integration: surplife_ble
+      domain: light

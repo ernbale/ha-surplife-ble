@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import voluptuous as vol
 from homeassistant.helpers import config_validation as cv
 
-from .core import curtain_c2, effects
+from .core import curtain_c2, effects, sequence
 
 if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import EntityPlatform
@@ -16,6 +16,8 @@ SERVICE_UPLOAD_ANIMATION = "upload_animation"
 SERVICE_PLAY_ANIMATION = "play_animation"
 SERVICE_SHOW_TEXT = "show_text"
 SERVICE_SHOW_EFFECT = "show_effect"
+SERVICE_PLAY_SEQUENCE = "play_sequence"
+SERVICE_STOP_SEQUENCE = "stop_sequence"
 
 ATTR_PATH = "path"
 ATTR_URL = "url"
@@ -84,6 +86,27 @@ EFFECT_SCHEMA = {
 }
 
 
+_SECONDS = vol.All(
+    vol.Coerce(int), vol.Range(min=sequence.MIN_SECONDS, max=sequence.MAX_SECONDS)
+)
+_STEP = vol.Schema(
+    {
+        vol.Exclusive("effect", "what"): cv.string,
+        vol.Exclusive("text", "what"): cv.string,
+        vol.Optional("seconds"): _SECONDS,
+    }
+)
+
+SEQUENCE_SCHEMA = {
+    # Either a line such as "heart 30s; BUON NATALE 1m; rain" or a list of steps.
+    # With neither, the line of the Sequence text box is used.
+    vol.Optional("sequence"): cv.string,
+    vol.Optional("steps"): [_STEP],
+    vol.Optional("seconds", default=sequence.DEFAULT_SECONDS): _SECONDS,
+    vol.Optional("repeat", default=True): cv.boolean,
+}
+
+
 def async_register_entity_services(platform: EntityPlatform) -> None:
     """Register the curtain services on the light platform."""
     platform.async_register_entity_service(
@@ -96,3 +119,7 @@ def async_register_entity_services(platform: EntityPlatform) -> None:
     platform.async_register_entity_service(
         SERVICE_SHOW_EFFECT, EFFECT_SCHEMA, "async_show_effect"
     )
+    platform.async_register_entity_service(
+        SERVICE_PLAY_SEQUENCE, SEQUENCE_SCHEMA, "async_play_sequence"
+    )
+    platform.async_register_entity_service(SERVICE_STOP_SEQUENCE, {}, "async_stop_sequence")

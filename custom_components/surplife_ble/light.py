@@ -25,7 +25,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import animation
 from .const import DOMAIN
 from .coordinator import SurplifeCoordinator
-from .core import curtain_c2
+from .core import curtain_c2, sequence
 from .services import async_register_entity_services
 
 
@@ -156,6 +156,7 @@ class SurplifeLight(CoordinatorEntity[SurplifeCoordinator], LightEntity):
             await self.coordinator.async_set_power(True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
+        self.coordinator.async_stop_sequence()
         await self.coordinator.async_set_power(False)
 
     async def async_upload_animation(self, **kwargs: Any) -> None:
@@ -178,6 +179,8 @@ class SurplifeLight(CoordinatorEntity[SurplifeCoordinator], LightEntity):
 
     async def async_show_text(self, **kwargs: Any) -> None:
         """Service: render text, show it in the Screen preview and upload it."""
+        if not kwargs["preview_only"]:
+            self.coordinator.async_stop_sequence()
         await animation.async_show_text(
             self.hass,
             self.coordinator,
@@ -192,7 +195,29 @@ class SurplifeLight(CoordinatorEntity[SurplifeCoordinator], LightEntity):
             preview_only=kwargs["preview_only"],
         )
 
+    async def async_play_sequence(self, **kwargs: Any) -> None:
+        """Service: show effects and texts one after the other, each for its own time."""
+        try:
+            if kwargs.get("steps"):
+                steps = sequence.from_dicts(kwargs["steps"], kwargs["seconds"])
+            else:
+                steps = sequence.parse(
+                    kwargs.get("sequence") or self.coordinator.sequence_text, kwargs["seconds"]
+                )
+        except ValueError as err:
+            raise animation.AnimationError(str(err)) from err
+        if not self.coordinator.is_curtain:
+            raise animation.AnimationError(
+                "this device is not an IOTBT curtain or net, or it is not connected yet"
+            )
+        self.coordinator.async_start_sequence(steps, repeat=kwargs["repeat"])
+
+    async def async_stop_sequence(self, **kwargs: Any) -> None:
+        """Service: stop the running sequence. The device keeps showing the last step."""
+        self.coordinator.async_stop_sequence()
+
     async def async_show_effect(self, **kwargs: Any) -> None:
+        self.coordinator.async_stop_sequence()
         """Service: draw a built-in effect, upload it and play it."""
         await animation.async_show_effect(
             self.hass,

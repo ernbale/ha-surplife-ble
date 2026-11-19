@@ -423,6 +423,27 @@ EFFECTS: dict[str, Effect] = {
     "sleigh": Effect(_picture(_sleigh_scenes), 70, True),
 }
 
+# English and Italian names, for the sequence parser. They match the translations.
+NAMES: dict[str, tuple[str, str]] = {
+    "sparkle": ("Sparkling lights", "Luci che brillano a caso"),
+    "sparkle_gold": ("Sparkling lights, white and gold", "Luci che brillano, bianco e oro"),
+    "rain": ("Rain", "Pioggia"),
+    "snow": ("Snow", "Neve"),
+    "matrix": ("Green rain", "Pioggia verde"),
+    "fire": ("Fire", "Fuoco"),
+    "fireworks": ("Fireworks", "Fuochi d'artificio"),
+    "rainbow": ("Rainbow", "Arcobaleno"),
+    "plasma": ("Color clouds", "Nuvole di colore"),
+    "color_fade": ("Color fade", "Tinta che cambia"),
+    "flag_italy": ("Italian flag", "Tricolore"),
+    "heart": ("Heart", "Cuore"),
+    "star": ("Star", "Stella"),
+    "heart_and_star": ("Heart and star", "Cuore e stella"),
+    "tree": ("Christmas tree", "Albero di Natale"),
+    "comet": ("Comet", "Stella cometa"),
+    "sleigh": ("Sleigh", "Slitta"),
+}
+
 
 def available(cols: int, rows: int) -> list[str]:
     """Effect names that fit a grid: all patterns, and the pictures from 32 x 16 up."""

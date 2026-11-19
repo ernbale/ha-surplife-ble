@@ -453,6 +453,62 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
     text_background: str = "black"
     text_bold: bool = True
     animation_name: str | None = None  # the built-in effect chosen last, for the selector
+    sequence_text: str = ""  # the line of the Sequence text box
+    sequence_index: int | None = None  # the step being shown, while a sequence runs
+    _sequence_task: asyncio.Task[None] | None = None
+    _sequence_sleep = staticmethod(asyncio.sleep)  # replaced in tests
+
+    @property
+    def sequence_running(self) -> bool:
+        return self._sequence_task is not None and not self._sequence_task.done()
+
+    def async_start_sequence(self, steps: list[Any], *, repeat: bool = True) -> None:
+        """Show ``steps`` (``core.sequence.Step``) one after the other in the background."""
+        self.async_stop_sequence()
+        self._sequence_task = asyncio.get_running_loop().create_task(
+            self._async_run_sequence(steps, repeat)
+        )
+        self.async_update_listeners()
+
+    def async_stop_sequence(self) -> None:
+        """Stop the running sequence. The device keeps showing the last step."""
+        task, self._sequence_task = self._sequence_task, None
+        self.sequence_index = None
+        if task is not None and not task.done():
+            task.cancel()
+            self.async_update_listeners()
+
+    async def _async_run_sequence(self, steps: list[Any], repeat: bool) -> None:
+        # Imported here: animation imports this module for type checking only.
+        from . import animation
+
+        try:
+            while True:
+                for index, step in enumerate(steps):
+                    self.sequence_index = index
+                    self.async_update_listeners()
+                    for _attempt in range(3):
+                        try:
+                            if step.kind == "text":
+                                await animation.async_show_text(
+                                    self.hass, self, step.value, **self.text_settings()
+                                )
+                            else:
+                                await animation.async_show_effect(self.hass, self, step.value)
+                                self.animation_name = step.value
+                            break
+                        except animation.AnimationError as err:
+                            # Usually the Bluetooth link dropped. Wait for it and retry.
+                            _LOGGER.warning("Sequence step %s failed: %s", index + 1, err)
+                            await self._sequence_sleep(15)
+                    await self._sequence_sleep(step.seconds)
+                if not repeat:
+                    break
+        finally:
+            if self._sequence_task is asyncio.current_task():
+                self._sequence_task = None
+                self.sequence_index = None
+                self.async_update_listeners()
 
     def text_settings(self) -> dict[str, Any]:
         """Keyword arguments for ``animation.async_show_text`` from the text controls."""
@@ -477,5 +533,6 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
         self.async_update_listeners()
 
     async def async_disconnect(self) -> None:
+        self.async_stop_sequence()
         if self.client:
             await self.client.disconnect()

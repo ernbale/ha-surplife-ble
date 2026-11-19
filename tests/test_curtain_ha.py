@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import struct
 from pathlib import Path
@@ -14,7 +15,7 @@ from curtain_fakes import FF01, FakeCurtain
 from fake_homeassistant import FakeEntry, FakeHass, HomeAssistantError, install, make_coordinator
 from test_client import FakeIotbtBleakClient
 
-from custom_components.surplife_ble.core import curtain_c2
+from custom_components.surplife_ble.core import curtain_c2, effects
 from custom_components.surplife_ble.core.calibration import ColorCalibration
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -218,6 +219,8 @@ async def test_light_setup_registers_the_services(ha: SimpleNamespace) -> None:
         "play_animation": (ha.services.PLAY_SCHEMA, "async_play_animation"),
         "show_text": (ha.services.TEXT_SCHEMA, "async_show_text"),
         "show_effect": (ha.services.EFFECT_SCHEMA, "async_show_effect"),
+        "play_sequence": (ha.services.SEQUENCE_SCHEMA, "async_play_sequence"),
+        "stop_sequence": ({}, "async_stop_sequence"),
     }
 
 
@@ -1287,3 +1290,107 @@ async def test_options_flow_rejects_an_invalid_controller_side(ha: SimpleNamespa
     result = await option_flow(ha, FakeEntry()).async_step_init({"controller_side": "front"})
     assert result["type"] == "form"
     assert result["errors"] == {"base": "invalid_orientation"}
+
+
+# ---------------------------------------------------------------------------
+# Text, built-in effects and sequences
+# ---------------------------------------------------------------------------
+
+
+def uploads(fake: FakeCurtain) -> list[int]:
+    """Frame counts of the uploads the fake received, from the EA 01 headers."""
+    return [int.from_bytes(p[23:25], "big") for p in fake.payloads if p[:2] == b"\xea\x01"]
+
+
+@pytest.mark.asyncio
+async def test_show_text_service_uploads_and_sets_the_preview(ha: SimpleNamespace) -> None:
+    coordinator, fake = await make_curtain(ha)
+    light = ha.light.SurplifeLight(coordinator, FakeEntry())
+    data = vol.Schema(ha.services.TEXT_SCHEMA)({"text": "hi", "speed": 40})
+    await light.async_show_text(**data)
+    assert uploads(fake) == [1]  # two letters fit 20 LEDs: one still frame
+    assert fake.payloads[-1] == bytes.fromhex("e20901286400")
+    assert coordinator.preview_png.startswith(PNG_SIGNATURE)
+    assert coordinator.animation_title == "hi"
+
+
+@pytest.mark.asyncio
+async def test_show_text_preview_only_sends_nothing(ha: SimpleNamespace) -> None:
+    coordinator, fake = await make_curtain(ha)
+    light = ha.light.SurplifeLight(coordinator, FakeEntry())
+    data = vol.Schema(ha.services.TEXT_SCHEMA)(
+        {"text": "buon natale", "preview_only": True, "background": [0, 0, 255]}
+    )
+    await light.async_show_text(**data)
+    assert fake.payloads == []
+    assert png_pixel(coordinator.preview_png, 0, 0) == (0, 0, 255)
+
+
+@pytest.mark.asyncio
+async def test_show_effect_service_uploads_the_effect_at_its_speed(ha: SimpleNamespace) -> None:
+    coordinator, fake = await make_curtain(ha)
+    light = ha.light.SurplifeLight(coordinator, FakeEntry())
+    await light.async_show_effect(**vol.Schema(ha.services.EFFECT_SCHEMA)({"effect": "rain"}))
+    assert uploads(fake) == [len(effects.build("rain", 20, 20))]
+    assert fake.payloads[-1] == bytes((0xE2, 0x09, 1, effects.EFFECTS["rain"].speed, 100, 0))
+    assert coordinator.animation_name == "rain"
+    with pytest.raises(ha.animation.AnimationError, match="at least 32x16"):
+        await light.async_show_effect(
+            **vol.Schema(ha.services.EFFECT_SCHEMA)({"effect": "heart"})
+        )
+
+
+@pytest.mark.asyncio
+async def test_sequence_shows_every_step_for_its_time_and_stops(ha: SimpleNamespace) -> None:
+    coordinator, fake = await make_curtain(ha)
+    light = ha.light.SurplifeLight(coordinator, FakeEntry())
+    waits: list[float] = []
+
+    async def fast_sleep(seconds: float) -> None:
+        waits.append(seconds)
+
+    coordinator._sequence_sleep = fast_sleep
+    data = vol.Schema(ha.services.SEQUENCE_SCHEMA)(
+        {"sequence": "rain 30s; hi 1m; snow", "seconds": 45, "repeat": False}
+    )
+    await light.async_play_sequence(**data)
+    assert coordinator.sequence_running
+    await coordinator._sequence_task
+    assert waits == [30, 60, 45]
+    assert uploads(fake) == [
+        len(effects.build("rain", 20, 20)), 1, len(effects.build("snow", 20, 20))
+    ]  # fmt: skip
+    assert not coordinator.sequence_running
+    assert coordinator.sequence_index is None
+
+
+@pytest.mark.asyncio
+async def test_sequence_repeats_until_it_is_stopped(ha: SimpleNamespace) -> None:
+    coordinator, fake = await make_curtain(ha)
+    light = ha.light.SurplifeLight(coordinator, FakeEntry())
+    rounds = 0
+
+    async def sleep_then_stop(seconds: float) -> None:
+        nonlocal rounds
+        rounds += 1
+        if rounds == 3:
+            await light.async_stop_sequence()
+            await asyncio.sleep(0)  # the cancellation is delivered here
+
+    coordinator._sequence_sleep = sleep_then_stop
+    steps = [{"effect": "Pioggia", "seconds": 20}, {"text": "ok"}]
+    await light.async_play_sequence(**vol.Schema(ha.services.SEQUENCE_SCHEMA)({"steps": steps}))
+    task = coordinator._sequence_task
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert len(uploads(fake)) == 3  # rain, ok, rain again
+    assert not coordinator.sequence_running
+
+
+@pytest.mark.asyncio
+async def test_sequence_errors_are_reported_before_it_starts(ha: SimpleNamespace) -> None:
+    coordinator, _ = await make_curtain(ha)
+    light = ha.light.SurplifeLight(coordinator, FakeEntry())
+    with pytest.raises(ha.animation.AnimationError, match="no steps"):
+        await light.async_play_sequence(**vol.Schema(ha.services.SEQUENCE_SCHEMA)({}))
+    assert not coordinator.sequence_running

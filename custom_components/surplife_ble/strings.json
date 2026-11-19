@@ -147,6 +147,32 @@
           "description": "Brightness from 1 to 100."
         }
       }
+    },
+    "play_sequence": {
+      "name": "Play sequence",
+      "description": "Show effects and texts one after the other, each for its own time. Every step is stored in the flash memory of the device when it starts, so a step lasts at least 20 seconds. Choosing another effect or text, or turning the light off, stops the sequence.",
+      "fields": {
+        "sequence": {
+          "name": "Sequence",
+          "description": "Steps separated by ; such as: heart 30s; BUON NATALE 1m; rain. Effect names in English or Italian, anything else is a text. Empty: the line of the Sequence text box."
+        },
+        "steps": {
+          "name": "Steps",
+          "description": "The same as a list: every step has effect or text, and optionally seconds."
+        },
+        "seconds": {
+          "name": "Seconds per step",
+          "description": "For the steps that have no time of their own."
+        },
+        "repeat": {
+          "name": "Repeat",
+          "description": "Start again from the first step after the last one."
+        }
+      }
+    },
+    "stop_sequence": {
+      "name": "Stop sequence",
+      "description": "Stop the running sequence. The device keeps showing the last step."
     }
   },
   "options": {
@@ -220,6 +246,9 @@
     "text": {
       "text": {
         "name": "Text"
+      },
+      "sequence": {
+        "name": "Sequence"
       }
     },
     "select": {
@@ -293,6 +322,9 @@
     "switch": {
       "text_bold": {
         "name": "Text bold"
+      },
+      "sequence": {
+        "name": "Sequence running"
       }
     }
   }

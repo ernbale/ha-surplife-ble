@@ -3,6 +3,9 @@
     "text": {
       "text": {
         "name": "Scritta"
+      },
+      "sequence": {
+        "name": "Sequenza"
       }
     },
     "select": {
@@ -76,6 +79,9 @@
     "switch": {
       "text_bold": {
         "name": "Scritta in grassetto"
+      },
+      "sequence": {
+        "name": "Sequenza in corso"
       }
     }
   },

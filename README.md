@@ -103,6 +103,31 @@ fireworks, rainbow, color clouds, color fade, Italian flag and, from 32x16 up, h
 tree, comet and sleigh. The `surplife_ble.show_effect` service does the same. Text has a
 Text color and a Text background selector.
 
+**Sequences.** A sequence shows effects and texts one after the other, each for its own
+time, and starts again after the last one. Write it in the Sequence text box as one line,
+with the steps separated by `;`, then turn on the Sequence running switch:
+
+```text
+heart 30s; BUON NATALE 1m; rain; fireworks 45s
+```
+
+- A step that is an effect name (English or Italian, any case) shows that effect.
+- Anything else is a text, shown with the current text settings. Put it in quotes if the
+  word is also an effect name.
+- A time is a number followed by `s` or `m` at the end of the step. Without one a step
+  lasts 60 seconds. A plain number is part of the text, so `AUGURI 2027` is a text.
+
+The `surplife_ble.play_sequence` service takes the same line, or a list of steps, and
+`surplife_ble.stop_sequence` stops it. Choosing another effect or text, or turning the
+light off, stops the sequence too. It does not restart by itself after Home Assistant
+restarts.
+
+Home Assistant runs the sequence, so it needs the Bluetooth link at every change of step.
+If the link is down, the step is retried. Every step is written to the flash memory of the
+device when it starts. How many writes that memory takes is not known, so a step lasts at
+least 20 seconds and long steps are kinder to the device: one minute per step is about
+1400 writes a day, ten minutes about 140.
+
 **Examples.** [examples/net_32x16](examples/net_32x16) has the same effects as GIF files and
 the script that saves them.
 

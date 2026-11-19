@@ -111,6 +111,7 @@ class SurplifeAnimationSelect(CoordinatorEntity[SurplifeCoordinator], SelectEnti
             self.coordinator.animation_name = last.state
 
     async def async_select_option(self, option: str) -> None:
+        self.coordinator.async_stop_sequence()
         await animation.async_show_effect(self.hass, self.coordinator, option)
         self.coordinator.animation_name = option
         self.async_write_ha_state()
