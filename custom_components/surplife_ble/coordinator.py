@@ -189,6 +189,11 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
         """True once the connected device is resolved as an IOTBT curtain (product 0xC2)."""
         return bool(self.client and self.client.is_curtain)
 
+    @property
+    def curtain_grid(self) -> tuple[int, int]:
+        """(columns, rows) of the connected curtain or net. 20 x 20 until it is resolved."""
+        return self.client.curtain_grid if self.client else curtain_c2.DEFAULT_GRID
+
     def _apply_curtain_assumed(self, state: LightState) -> LightState:
         """Add the color and brightness the curtain never reports.
 

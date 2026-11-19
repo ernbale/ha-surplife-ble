@@ -35,7 +35,7 @@ def test_translations_match_strings() -> None:
 
 def test_manifest_declares_the_curtain_requirements() -> None:
     manifest = json.loads((INTEGRATION / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["version"] == "0.2.0"
+    assert manifest["version"] == "0.2.1"
     assert not any("lz4" in requirement.lower() for requirement in manifest["requirements"])
     # Home Assistant core already bundles Pillow, so it must not be pinned here.
     assert not any("pillow" in requirement.lower() for requirement in manifest["requirements"])

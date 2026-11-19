@@ -18,6 +18,7 @@ and as a 20x20 screen for images and GIFs.
 | Overall brightness | Verified on one DX23012 |
 | State confirmation | Verified on one DX23012 |
 | Curtain lights: power, RGB color, brightness, effects, screen | Verified on one IOTBT437 |
+| Net lights 32x16 (product `0x0071`): power, RGB color, effects, screen | Verified on one unit, through an ESPHome Bluetooth proxy |
 | Multiple devices | Supported |
 | Automatic discovery | Supported |
 | Manual setup | Supported |
@@ -26,6 +27,7 @@ and as a 20x20 screen for images and GIFs.
 
 - MIHEAL DX23012 floor lamp with the verified IOTBT state signature
 - IOTBT curtain lights (product `0x00C2`, 20x20 LEDs, tested as `IOTBT437`)
+- IOTBT net lights (product `0x0071`, 32x16 = 512 LEDs, about 3 m x 1.5 m, sold with the Surplife app)
 
 Other `IOTBT` devices can use different commands. An `IOTBT` name alone does not prove compatibility.
 
@@ -61,6 +63,19 @@ Configure the integration through the UI:
 
 > **Tip:** If discovery does not find your device, use a BLE scanner app to find its address.
 > The device advertises as `IOTBT` followed by a short string. For example, `IOTBT144`.
+
+## IOTBT net lights (product 0x71, 32x16)
+
+This fork adds the 32x16 net light (512 LEDs, product `0x0071`). It uses the same commands as
+the 20x20 curtain below and gets the same entities. The grid size follows the product ID that
+the device reports, so pictures and GIFs are scaled to 32x16 and a frame is 1024 bytes. The
+device memory holds at most 100 frames (102400 bytes), and a 100-frame upload was accepted.
+
+Verified on one unit on 2026-11-19: power, color, effect 10, uploads of 1, 16, 46, 93 and 100
+frames, playback speed, and control from Home Assistant through an ESPHome Bluetooth proxy.
+Not verified: the other effect IDs. The vendor manual lists 17 built-in effects.
+
+Everything in the curtain section below applies, with 32x16 in place of 20x20.
 
 ## IOTBT curtain lights (product 0xC2)
 

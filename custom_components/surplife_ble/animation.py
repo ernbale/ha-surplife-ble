@@ -58,16 +58,17 @@ def decode_animation(
     max_frames: int = curtain_c2.MAX_UPLOAD_FRAMES,
     controller_side: str = "left",
     flip: bool = False,
+    cols: int = curtain_c2.GRID,
+    rows: int = curtain_c2.GRID,
 ) -> DecodedAnimation:
     """Decode image bytes into curtain frames and a preview. Blocking: run in an executor.
 
     Raises :class:`AnimationError` for unreadable images and for more than ``max_frames``
     frames (the device holds at most 128).
     """
-    if not 1 <= max_frames <= curtain_c2.MAX_UPLOAD_FRAMES:
-        raise AnimationError(
-            f"max_frames must be between 1 and {curtain_c2.MAX_UPLOAD_FRAMES}"
-        )
+    limit = curtain_c2.max_upload_frames(cols, rows)
+    if not 1 <= max_frames <= limit:
+        raise AnimationError(f"max_frames must be between 1 and {limit}")
     try:
         loaded = curtain_c2.load_image_frames(
             io.BytesIO(data),
@@ -76,17 +77,25 @@ def decode_animation(
             controller_side=controller_side,
             flip=flip,
             count_all=False,
+            cols=cols,
+            rows=rows,
         )
         if loaded.total > max_frames:
             raise AnimationError(
                 f"too many frames: the animation has more than {max_frames} frames "
-                f"(the curtain holds at most {curtain_c2.MAX_UPLOAD_FRAMES}). "
+                f"(the device holds at most {limit}). "
                 "Use fewer frames or a lower frame rate."
             )
         preview = curtain_c2.render_preview_png(
             curtain_c2.frame_to_image(
-                loaded.frames[0], controller_side=controller_side, flip=flip
-            )
+                loaded.frames[0],
+                controller_side=controller_side,
+                flip=flip,
+                cols=cols,
+                rows=rows,
+            ),
+            cols=cols,
+            rows=rows,
         )
     except AnimationError:
         raise
@@ -221,12 +230,17 @@ async def async_upload(
         raise AnimationError(
             "this device is not an IOTBT curtain (product 0xC2), or it is not connected yet"
         )
+    cols, rows = coordinator.curtain_grid
+    # The service default is the 20 x 20 limit (128). A larger grid holds fewer frames.
+    max_frames = min(max_frames, curtain_c2.max_upload_frames(cols, rows))
     decoded = await hass.async_add_executor_job(
         partial(
             decode_animation,
             source.data,
             resample=resample,
             max_frames=max_frames,
+            cols=cols,
+            rows=rows,
             controller_side=controller_side or coordinator.controller_side,
             flip=coordinator.flip if flip is None else flip,
         )

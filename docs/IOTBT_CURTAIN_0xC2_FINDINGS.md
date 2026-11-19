@@ -607,3 +607,21 @@ shows the picture as given, before the calibration.
 - Color and brightness are never reported, so Home Assistant shows them as assumed state.
 - The calibration values for the LED look were chosen by eye. The calibration is not a
   measured color profile, and it has no per-device default.
+
+## 15. Product 0x0071: 32 x 16 net light
+
+Hardware-verified on 2026-11-19 on one unit (512 LEDs, about 3 m x 1.5 m, 10 cm pitch).
+
+- Same GATT profile and the same transport as product 0xC2.
+- EA 81 state: `ea810100710623666e64f0000000000001020000000102010071`. Bytes 3-4 are the
+  product ID `00 71` and byte 5 is `06`. Bytes 17-18 are `02 00` (512) where the 20 x 20
+  curtain has `01 90` (400), so they look like the LED count. This is a hypothesis.
+- Power (`3B 23`/`3B 24`, cmdId `0B`), color (`3B A1`), effects (`E0 02`, cmdId `0A`) and
+  playback (`E2 09`) work as on 0xC2. Effect 10 shows horizontal bands moving down.
+- Grid: 32 columns of 16 LEDs. Buffer index = `column * 16 + row`, row 0 at the top, column 0
+  nearest the controller, not serpentine. A frame is 512 pixels, 1024 bytes.
+- Upload: the header total is `1024 * frames`. One-frame header:
+  `ea 01 01 00 00 04 00`, 16 zero bytes, `00 01`, 15 zero bytes. Uploads of 1, 16, 46, 93 and
+  100 frames were acknowledged and played. 100 frames is the 102400-byte limit.
+- The code keeps the grid per product in `curtain_c2.GRIDS`. `LightClient.curtain_grid` reads
+  the product ID from the resolved state.

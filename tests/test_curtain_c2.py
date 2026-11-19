@@ -627,3 +627,48 @@ def test_load_image_frames_accepts_a_file_object_and_can_stop_early(tmp_path) ->
     assert (len(full.frames), full.total) == (3, 3)
     with pytest.raises(ValueError, match="not a readable image"):
         curtain_c2.load_image_frames(io.BytesIO(b"nope"))
+
+
+# ---------------------------------------------------------------------------
+# Product 0x0071: 32 x 16 net light, hardware-verified 2026-11-19.
+# ---------------------------------------------------------------------------
+
+NET_71_STATE = bytes.fromhex("ea810100710623666e64f0000000000001020000000102010071")
+
+
+def test_net_71_grid_and_state() -> None:
+    state = curtain_c2.parse_state(NET_71_STATE)
+    assert state is not None
+    assert state.product_id == curtain_c2.PRODUCT_ID_NET_71
+    assert state.power is True
+    assert curtain_c2.grid_for_product(state.product_id) == (32, 16)
+    assert curtain_c2.grid_for_product(curtain_c2.PRODUCT_ID) == (20, 20)
+    assert curtain_c2.grid_for_product(0x1234) == (20, 20)
+    assert curtain_c2.max_upload_frames(32, 16) == 100
+    assert curtain_c2.max_upload_frames() == curtain_c2.MAX_UPLOAD_FRAMES
+
+
+def test_net_71_pixel_order_is_column_major_with_16_rows() -> None:
+    assert curtain_c2.pixel_index(0, 0, cols=32, rows=16) == 0
+    assert curtain_c2.pixel_index(0, 15, cols=32, rows=16) == 15
+    assert curtain_c2.pixel_index(1, 0, cols=32, rows=16) == 16
+    assert curtain_c2.pixel_index(31, 15, cols=32, rows=16) == 511
+    assert curtain_c2.pixel_index(31, 0, cols=32, rows=16, controller_side="right") == 0
+    pixels = [(x, y, 0) for y in range(16) for x in range(32)]
+    frame = curtain_c2.image_to_frame(pixels, cols=32, rows=16)
+    assert frame[16] == (1, 0, 0)
+    assert curtain_c2.frame_to_image(frame, cols=32, rows=16) == pixels
+
+
+def test_net_71_upload_matches_the_frames_accepted_by_the_device() -> None:
+    """The header and address the real net acknowledged on 2026-11-19 (one frame)."""
+    frame = curtain_c2.solid_frame((255, 0, 0), cols=32, rows=16)
+    steps = curtain_c2.build_upload([frame], cols=32, rows=16)
+    assert steps[0].payload.hex() == "ea01010000040000" + "00" * 15 + "0001" + "00" * 15
+    block = steps[2].payload[4:]
+    assert steps[1].payload == bytes.fromhex("ea0200000000") + len(block).to_bytes(2, "big")
+    assert steps[3].payload == bytes.fromhex("ea0400")
+    with pytest.raises(ValueError):
+        curtain_c2.build_upload([frame] * 101, cols=32, rows=16)
+    with pytest.raises(ValueError):
+        curtain_c2.build_upload([frame])  # a 512-pixel frame is not a 20 x 20 frame

@@ -55,6 +55,32 @@ DEFAULT_PLAY_MODE = PLAY_MODE_LOOP_APP
 GRID = 20
 PIXELS_PER_FRAME = GRID * GRID
 BYTES_PER_FRAME = PIXELS_PER_FRAME * 2
+# Product 0x0071 is a 32 x 16 net light (512 LEDs, local name IOTBT + three hex digits).
+# It uses the same commands, the same column-major pixel order and the same EA 01..04 upload, with
+# 32 * 16 * 2 = 1024 bytes per frame. Hardware-verified on 2026-11-19: power, effect
+# and a one-frame text upload.
+PRODUCT_ID_NET_71 = 0x0071
+DEFAULT_GRID = (GRID, GRID)
+# product ID -> (columns, rows). A column is one string; column 0 is nearest the controller.
+GRIDS: dict[int, tuple[int, int]] = {
+    PRODUCT_ID: DEFAULT_GRID,
+    PRODUCT_ID_NET_71: (32, 16),
+}
+
+
+def grid_for_product(product_id: int | None) -> tuple[int, int]:
+    """Return (columns, rows) for a product ID. Unknown products get 20 x 20."""
+    if product_id is None:
+        return DEFAULT_GRID
+    return GRIDS.get(product_id, DEFAULT_GRID)
+
+
+def max_upload_frames(cols: int = GRID, rows: int = GRID) -> int:
+    """Frames that fit in the 102400-byte device limit (128 at 20 x 20, 100 at 32 x 16).
+
+    The limit is hardware-verified on product 0x00C2 only.
+    """
+    return MAX_UPLOAD_BYTES // (cols * rows * 2)
 # The device rejects a header whose total is above 102400 bytes (reply EA 01 02,
 # "too big"). At 20 x 20 that is 128 frames. 128 frames (102400) is accepted and 129
 # (103200) is rejected.
@@ -294,6 +320,8 @@ def pixel_index(
     controller_side: str = "left",
     mirror: bool = False,
     flip: bool = False,
+    cols: int = GRID,
+    rows: int = GRID,
 ) -> int:
     """Return the buffer index of image pixel (x, y).
 
@@ -307,11 +335,11 @@ def pixel_index(
     string. ``mirror`` flips that choice (an alias for switching the side). ``flip`` maps
     y to 19 - y.
     """
-    _check_range("x", x, 0, GRID - 1)
-    _check_range("y", y, 0, GRID - 1)
-    column = GRID - 1 - x if _mirrored(controller_side, mirror) else x
-    row = GRID - 1 - y if flip else y
-    return column * GRID + row
+    _check_range("x", x, 0, cols - 1)
+    _check_range("y", y, 0, rows - 1)
+    column = cols - 1 - x if _mirrored(controller_side, mirror) else x
+    row = rows - 1 - y if flip else y
+    return column * rows + row
 
 
 def image_to_frame(
@@ -320,20 +348,29 @@ def image_to_frame(
     controller_side: str = "left",
     mirror: bool = False,
     flip: bool = False,
+    cols: int = GRID,
+    rows: int = GRID,
 ) -> list[RGB]:
-    """Map 400 row-major image pixels (index ``y * 20 + x``) to buffer order.
+    """Map row-major image pixels (index ``y * cols + x``) to buffer order.
 
     See :func:`pixel_index` for ``controller_side``, ``mirror`` and ``flip``.
     """
-    if len(pixels) != PIXELS_PER_FRAME:
-        raise ValueError(f"an image frame needs {PIXELS_PER_FRAME} pixels, got {len(pixels)}")
-    frame: list[RGB] = [(0, 0, 0)] * PIXELS_PER_FRAME
-    for y in range(GRID):
-        for x in range(GRID):
+    count = cols * rows
+    if len(pixels) != count:
+        raise ValueError(f"an image frame needs {count} pixels, got {len(pixels)}")
+    frame: list[RGB] = [(0, 0, 0)] * count
+    for y in range(rows):
+        for x in range(cols):
             index = pixel_index(
-                x, y, controller_side=controller_side, mirror=mirror, flip=flip
+                x,
+                y,
+                controller_side=controller_side,
+                mirror=mirror,
+                flip=flip,
+                cols=cols,
+                rows=rows,
             )
-            frame[index] = pixels[y * GRID + x]
+            frame[index] = pixels[y * cols + x]
     return frame
 
 
@@ -343,46 +380,66 @@ def frame_to_image(
     controller_side: str = "left",
     mirror: bool = False,
     flip: bool = False,
+    cols: int = GRID,
+    rows: int = GRID,
 ) -> list[RGB]:
     """Invert :func:`image_to_frame`: buffer-order pixels back to row-major image pixels."""
-    if len(frame) != PIXELS_PER_FRAME:
-        raise ValueError(f"a frame needs {PIXELS_PER_FRAME} pixels, got {len(frame)}")
+    if len(frame) != cols * rows:
+        raise ValueError(f"a frame needs {cols * rows} pixels, got {len(frame)}")
     return [
-        frame[pixel_index(x, y, controller_side=controller_side, mirror=mirror, flip=flip)]
-        for y in range(GRID)
-        for x in range(GRID)
+        frame[
+            pixel_index(
+                x,
+                y,
+                controller_side=controller_side,
+                mirror=mirror,
+                flip=flip,
+                cols=cols,
+                rows=rows,
+            )
+        ]
+        for y in range(rows)
+        for x in range(cols)
     ]
 
 
-def render_preview_png(pixels: Sequence[RGB], scale: int = 10) -> bytes:
-    """Render 400 row-major pixels as a PNG, scaled up with nearest-neighbor (200 x 200)."""
-    if len(pixels) != PIXELS_PER_FRAME:
-        raise ValueError(f"a preview needs {PIXELS_PER_FRAME} pixels, got {len(pixels)}")
+def render_preview_png(
+    pixels: Sequence[RGB], scale: int = 10, *, cols: int = GRID, rows: int = GRID
+) -> bytes:
+    """Render row-major pixels as a PNG, scaled up with nearest-neighbor (200 x 200 at 20 x 20)."""
+    if len(pixels) != cols * rows:
+        raise ValueError(f"a preview needs {cols * rows} pixels, got {len(pixels)}")
     try:
         import io
 
         from PIL import Image
     except ImportError as err:
         raise RuntimeError("Pillow is required to render a preview") from err
-    image = Image.frombytes("RGB", (GRID, GRID), bytes(c for pixel in pixels for c in pixel))
-    image = image.resize((GRID * scale, GRID * scale), Image.Resampling.NEAREST)
+    image = Image.frombytes("RGB", (cols, rows), bytes(c for pixel in pixels for c in pixel))
+    image = image.resize((cols * scale, rows * scale), Image.Resampling.NEAREST)
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
 
 
-def solid_frame(color: RGB) -> list[RGB]:
+def solid_frame(color: RGB, *, cols: int = GRID, rows: int = GRID) -> list[RGB]:
     """A frame with every pixel set to ``color`` (buffer order does not matter)."""
-    return [color] * PIXELS_PER_FRAME
+    return [color] * (cols * rows)
 
 
-def frame_blob(pixels: Sequence[RGB], calibration: ColorCalibration | None = None) -> bytes:
-    """Pack 400 buffer-order pixels into an 800-byte big-endian blob.
+def frame_blob(
+    pixels: Sequence[RGB],
+    calibration: ColorCalibration | None = None,
+    *,
+    cols: int = GRID,
+    rows: int = GRID,
+) -> bytes:
+    """Pack buffer-order pixels into a big-endian blob (800 bytes at 20 x 20).
 
     An optional ``calibration`` adjusts every pixel before the coarse HSV conversion.
     """
-    if len(pixels) != PIXELS_PER_FRAME:
-        raise ValueError(f"a frame needs {PIXELS_PER_FRAME} pixels, got {len(pixels)}")
+    if len(pixels) != cols * rows:
+        raise ValueError(f"a frame needs {cols * rows} pixels, got {len(pixels)}")
     if calibration is None or calibration.is_identity:
         return b"".join(pixel_hsv16(*pixel).to_bytes(2, "big") for pixel in pixels)
     cache: dict[RGB, bytes] = {}
@@ -417,13 +474,13 @@ class UploadStep(NamedTuple):
     acked: bool
 
 
-def upload_header(frame_count: int) -> bytes:
+def upload_header(frame_count: int, *, cols: int = GRID, rows: int = GRID) -> bytes:
     """``EA 01 01 <u32 total bytes> 00 x16 <u16 frames> 00 x15`` (40 bytes).
 
     ``total`` is 800 * frames (20 * 20 * 2 bytes per frame), not the pixel count. The
     device answers ``EA 01 02`` if it is above 102400.
     """
-    total = BYTES_PER_FRAME * frame_count
+    total = cols * rows * 2 * frame_count
     return (
         bytes((0xEA, 0x01, 0x01))
         + total.to_bytes(4, "big")
@@ -449,7 +506,11 @@ def upload_address(block_lengths: Sequence[int]) -> bytes:
 
 
 def build_upload(
-    frames: Sequence[Sequence[RGB]], calibration: ColorCalibration | None = None
+    frames: Sequence[Sequence[RGB]],
+    calibration: ColorCalibration | None = None,
+    *,
+    cols: int = GRID,
+    rows: int = GRID,
 ) -> list[UploadStep]:
     """Build the header, address, content and end payloads for an upload.
 
@@ -467,14 +528,17 @@ def build_upload(
        frame with ``EA 03 <u16 index> <status>``.
     4. End ``EA 04 00`` (reply ``EA 04 <status>``).
     """
-    if not 1 <= len(frames) <= MAX_UPLOAD_FRAMES:
+    limit = max_upload_frames(cols, rows)
+    if not 1 <= len(frames) <= limit:
         raise ValueError(
-            f"an upload needs 1 to {MAX_UPLOAD_FRAMES} frames "
-            f"({MAX_UPLOAD_BYTES} bytes at 20x20), got {len(frames)}"
+            f"an upload needs 1 to {limit} frames "
+            f"({MAX_UPLOAD_BYTES} bytes at {cols}x{rows}), got {len(frames)}"
         )
-    blocks = [lz4_block(frame_blob(frame, calibration)) for frame in frames]
+    blocks = [
+        lz4_block(frame_blob(frame, calibration, cols=cols, rows=rows)) for frame in frames
+    ]
     steps = [
-        UploadStep("header", upload_header(len(blocks)), True),
+        UploadStep("header", upload_header(len(blocks), cols=cols, rows=rows), True),
         UploadStep("address", upload_address([len(block) for block in blocks]), True),
     ]
     for index, block in enumerate(blocks, 1):
@@ -564,6 +628,8 @@ def load_image_frames(
     mirror: bool = False,
     flip: bool = False,
     count_all: bool = True,
+    cols: int = GRID,
+    rows: int = GRID,
 ) -> ImageFrames:
     """Read every frame of a PNG, JPEG, GIF or WebP file as buffer-order 20 x 20 frames.
 
@@ -615,12 +681,17 @@ def load_image_frames(
             rgba = source.convert("RGBA")
             background = Image.new("RGBA", rgba.size, (0, 0, 0, 255))
             rgb = Image.alpha_composite(background, rgba).convert("RGB")
-            small = rgb.resize((GRID, GRID), filters[resample])
+            small = rgb.resize((cols, rows), filters[resample])
             data = small.tobytes()
             pixels = [(data[i], data[i + 1], data[i + 2]) for i in range(0, len(data), 3)]
             frames.append(
                 image_to_frame(
-                    pixels, controller_side=controller_side, mirror=mirror, flip=flip
+                    pixels,
+                    controller_side=controller_side,
+                    mirror=mirror,
+                    flip=flip,
+                    cols=cols,
+                    rows=rows,
                 )
             )
         if not count_all and len(frames) >= max_frames and total > max_frames:

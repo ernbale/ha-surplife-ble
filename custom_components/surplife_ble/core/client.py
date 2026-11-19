@@ -752,6 +752,14 @@ class LightClient:
         return bool(self.resolution and self.resolution.codec == CURTAIN_C2_CODEC)
 
     @property
+    def curtain_grid(self) -> tuple[int, int]:
+        """(columns, rows) of the resolved curtain or net: 20 x 20, or 32 x 16 for 0x0071."""
+        if not self.resolution or not self.resolution.source_packet_hex:
+            return curtain_c2.DEFAULT_GRID
+        state = curtain_c2.parse_state(bytes.fromhex(self.resolution.source_packet_hex))
+        return curtain_c2.grid_for_product(state.product_id if state else None)
+
+    @property
     def curtain_rgb(self) -> tuple[int, int, int] | None:
         """The last color sent, or None. The device never reports it (assumed state)."""
         return self._curtain_rgb
@@ -898,11 +906,13 @@ class LightClient:
         ack_timeout: float = 4.0,
         progress: Callable[[str], None] | None = None,
     ) -> None:
-        """Upload buffer-order 20 x 20 frames (at most 128) to the device flash.
+        """Upload buffer-order frames to the device flash (at most 128 at 20 x 20).
 
-        The color calibration of this client is applied to every pixel.
+        The frames must match :attr:`curtain_grid`. The color calibration of this client
+        is applied to every pixel.
         """
-        steps = curtain_c2.build_upload(frames, self.curtain_calibration)
+        cols, rows = self.curtain_grid
+        steps = curtain_c2.build_upload(frames, self.curtain_calibration, cols=cols, rows=rows)
         await self.upload_steps(steps, ack_timeout=ack_timeout, progress=progress)
 
     async def upload_curtain_animation(

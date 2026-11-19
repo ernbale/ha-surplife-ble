@@ -112,14 +112,17 @@ def classify_packet(packet: bytes) -> tuple[ProtocolResolution, bytes, str] | No
                 codec = "extended-custom"
                 confidence = 0.95
                 capabilities.update({"rgb", "brightness", "candidate-white"})
-            elif (candidate[3] << 8 | candidate[4]) == IOTBT_PRODUCT_CURTAIN_C2:
+            elif (candidate[3] << 8 | candidate[4]) in curtain_c2.GRIDS:
                 # Bytes 3-4 are the big-endian product ID. See
                 # docs/IOTBT_CURTAIN_0xC2_FINDINGS.md.
                 model_num = None
                 firmware = None
                 codec = CURTAIN_C2_CODEC
                 confidence = 0.90
-                notes.append("IOTBT symphony curtain (product 0xC2).")
+                if (candidate[3] << 8 | candidate[4]) == IOTBT_PRODUCT_CURTAIN_C2:
+                    notes.append("IOTBT symphony curtain (product 0xC2).")
+                else:
+                    notes.append("IOTBT 32 x 16 net light (product 0x71).")
             elif (
                 len(candidate) >= 27
                 and candidate[5] == 0x09
