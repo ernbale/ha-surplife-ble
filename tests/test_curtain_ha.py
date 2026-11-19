@@ -1480,3 +1480,20 @@ async def test_layout_change_redraws_what_was_shown_last(ha: SimpleNamespace) ->
     await coordinator._text_refresh_task
     assert coordinator.last_shown == ("text", "hi")
     assert len(uploads(fake)) == 3
+
+
+@pytest.mark.asyncio
+async def test_preview_survives_a_restart(ha: SimpleNamespace, tmp_path: Path) -> None:
+    coordinator, _ = await make_curtain(ha)
+    coordinator.hass.config.path = lambda *parts: str(tmp_path.joinpath(*parts))
+    (tmp_path / ".storage").mkdir()
+    light = ha.light.SurplifeLight(coordinator, FakeEntry())
+    await light.async_show_effect(**vol.Schema(ha.services.EFFECT_SCHEMA)({"effect": "rain"}))
+    saved = coordinator.preview_png
+    restarted, _ = await make_curtain(ha)
+    restarted.hass.config.path = coordinator.hass.config.path
+    assert restarted.preview_png is None
+    await restarted.async_restore_preview()
+    assert restarted.preview_png == saved
+    assert restarted.animation_title == "rain"
+    assert restarted.last_shown == ("effect", "rain")

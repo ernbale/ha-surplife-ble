@@ -272,7 +272,6 @@ async def async_upload(
             curtain_c2.CurtainUploadError, RuntimeError, ValueError, OSError, TimeoutError
         ) as err:
             raise AnimationError(str(err)) from err
-        coordinator.last_shown = None
         return len(frames)
     decoded = await hass.async_add_executor_job(
         partial(
@@ -361,10 +360,10 @@ async def async_show_text(
             brightness_percent=brightness,
             title=text,
             preview_png=preview,
+            shown=("text", text),
         )
     except (curtain_c2.CurtainUploadError, RuntimeError, ValueError, OSError, TimeoutError) as err:
         raise AnimationError(str(err)) from err
-    coordinator.last_shown = ("text", text)
     return len(frames)
 
 
@@ -407,8 +406,8 @@ async def async_show_effect(
             brightness_percent=brightness,
             title=name,
             preview_png=preview,
+            shown=("effect", name),
         )
     except (curtain_c2.CurtainUploadError, RuntimeError, ValueError, OSError, TimeoutError) as err:
         raise AnimationError(str(err)) from err
-    coordinator.last_shown = ("effect", name)
     return len(frames)

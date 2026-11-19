@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import json
 import logging
 import random
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from bleak.backends.device import BLEDevice
@@ -447,6 +450,7 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
         brightness_percent: int,
         title: str | None = None,
         preview_png: bytes | None = None,
+        shown: tuple[str, str] | None = None,
     ) -> None:
         """Write frames to the curtain's flash and play them. This wears the flash.
 
@@ -463,8 +467,11 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
         self.animation_title = title
         self.preview_png = preview_png
         self.preview_updated = datetime.now(UTC)
+        self.last_shown = shown  # what the layout controls draw again; None for an upload
         self._request_confirmation()
         self.async_update_listeners()
+        if preview_png is not None:
+            await self.hass.async_add_executor_job(self._save_preview)
 
     # Settings of the text controls (Text, Text size, Text scroll, Text color, Text bold).
     # They are kept here so the entities share them. The entities restore them at startup.
@@ -648,6 +655,50 @@ class SurplifeCoordinator(DataUpdateCoordinator[LightState]):
             "speed": self.animation_speed,
             "rainbow": self.text_color == self.RAINBOW,
         }
+
+    # The preview is kept in a file too, so the Screen preview is not empty after Home
+    # Assistant restarts: the device goes on showing the same picture.
+    def _preview_file(self) -> Path | None:
+        path = getattr(getattr(self.hass, "config", None), "path", None)
+        if path is None:
+            return None
+        name = self.address.replace(":", "").lower()
+        return Path(path(".storage", f"surplife_ble_preview_{name}.json"))
+
+    def _save_preview(self) -> None:
+        """Write the preview and what it shows. Blocking: run in an executor."""
+        file = self._preview_file()
+        if file is None or self.preview_png is None:
+            return
+        data = {
+            "title": self.animation_title,
+            "last_shown": self.last_shown,
+            "png": base64.b64encode(self.preview_png).decode(),
+        }
+        with suppress(OSError):
+            file.write_text(json.dumps(data))
+
+    def _load_preview(self) -> dict[str, Any] | None:
+        """Read the saved preview. Blocking: run in an executor."""
+        file = self._preview_file()
+        with suppress(OSError, ValueError, TypeError):
+            if file is not None:
+                data = json.loads(file.read_text())
+                return {**data, "png": base64.b64decode(data["png"])}
+        return None
+
+    async def async_restore_preview(self) -> None:
+        """Bring back the preview saved before the restart, unless there is a newer one."""
+        data = await self.hass.async_add_executor_job(self._load_preview)
+        if data is None or self.preview_png is not None:
+            return
+        self.preview_png = data["png"]
+        self.animation_title = data.get("title")
+        shown = data.get("last_shown")
+        if isinstance(shown, list) and len(shown) == 2:
+            self.last_shown = (str(shown[0]), str(shown[1]))
+        self.preview_updated = datetime.now(UTC)
+        self.async_update_listeners()
 
     def async_set_preview(self, preview_png: bytes, title: str | None = None) -> None:
         """Show a picture in the Screen preview without sending anything to the device."""
